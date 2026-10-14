@@ -1,0 +1,104 @@
+.dashboard-header {
+  background: #0b3d91;
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.dashboard-header p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.dashboard-actions a {
+  color: white;
+}
+
+.dashboard-main {
+  display: flex;
+  gap: 2rem;
+  padding: 2rem;
+  align-items: flex-start;
+  background: #f4f6f8;
+  min-height: calc(100vh - 80px);
+}
+
+.dashboard-main section:first-child {
+  flex: 1;
+}
+
+.dash-service {
+  background: white;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dash-service h3 {
+  margin: 0 0 0.25rem;
+}
+
+.dash-service p {
+  margin: 0 0 0.5rem;
+}
+
+.badge {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+
+.badge.on {
+  background: #e3f4e6;
+  color: #1e6b2e;
+}
+
+.badge.off {
+  background: #eee;
+  color: #666;
+}
+
+.dash-form {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dash-form input {
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.dash-form button {
+  margin-top: 1rem;
+  padding: 0.7rem;
+  background: #0b3d91;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
