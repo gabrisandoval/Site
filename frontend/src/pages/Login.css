@@ -4,38 +4,15 @@
   align-items: center;
   justify-content: center;
   background: #f4f6f8;
+  padding: 2rem 1rem;
 }
 
-.login-form {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
+.login-box {
   width: 100%;
-  max-width: 340px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  max-width: 360px;
 }
 
-.login-form input {
-  padding: 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
-}
-
-.login-form button {
-  margin-top: 1rem;
-  padding: 0.7rem;
-  background: #0b3d91;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.login-error {
-  color: #b3261e;
+.login-back {
+  text-align: center;
   font-size: 0.9rem;
 }

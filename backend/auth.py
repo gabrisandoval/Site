@@ -24,7 +24,11 @@ def hash_password(plain_password: str) -> str:
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
-    return bcrypt.checkpw(plain_password.encode("utf-8"), password_hash.encode("utf-8"))
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), password_hash.encode("utf-8"))
+    except ValueError:
+        # es. password piu' lunga di 72 byte: non puo' essere quella giusta
+        return False
 
 
 # --- JWT ---
@@ -47,22 +51,31 @@ def decode_access_token(token: str) -> dict:
 
 
 # --- Dipendenze FastAPI ---
-def get_current_employee(
+def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
-) -> models.Employee:
+) -> models.User:
+    """Qualunque utente loggato (cliente, dipendente o admin)."""
     payload = decode_access_token(token)
-    employee_id = payload.get("sub")
-    if employee_id is None:
+    user_id = payload.get("sub")
+    if user_id is None:
         raise HTTPException(status_code=401, detail="Token non valido")
 
-    employee = db.query(models.Employee).filter(models.Employee.id == int(employee_id)).first()
-    if employee is None:
+    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+    if user is None:
         raise HTTPException(status_code=401, detail="Utente non trovato")
-    return employee
+    return user
 
 
-def require_admin(current_employee: models.Employee = Depends(get_current_employee)) -> models.Employee:
-    if current_employee.role != "admin":
+def require_staff(current_user: models.User = Depends(get_current_user)) -> models.User:
+    """Solo dipendenti e admin."""
+    if current_user.role not in ("admin", "employee"):
+        raise HTTPException(status_code=403, detail="Operazione riservata al personale")
+    return current_user
+
+
+def require_admin(current_user: models.User = Depends(get_current_user)) -> models.User:
+    """Solo admin."""
+    if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Operazione riservata all'amministratore")
-    return current_employee
+    return current_user
