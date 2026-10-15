@@ -1,0 +1,117 @@
+.home {
+  min-height: 100vh;
+  background: #f4f6f8;
+}
+
+.home-header {
+  background: #0b3d91;
+  color: white;
+  padding: 1rem 2rem;
+}
+
+.home-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: white;
+}
+
+.home-main {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  gap: 2rem;
+  padding: 2rem;
+  align-items: flex-start;
+}
+
+.home-services {
+  flex: 1;
+}
+
+.home-services h2 {
+  margin: 0 0 1rem;
+}
+
+.service-card {
+  background: white;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.service-card h3 {
+  margin: 0 0 0.5rem;
+}
+
+.service-card p {
+  margin: 0 0 0.75rem;
+}
+
+.service-card button {
+  padding: 0.6rem 1.2rem;
+  background: #0b3d91;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.service-hint {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.home-account {
+  width: 300px;
+}
+
+.account-box {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.account-box p {
+  margin: 0;
+}
+
+.account-box button {
+  padding: 0.7rem;
+  background: white;
+  color: #0b3d91;
+  border: 1px solid #0b3d91;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.account-link {
+  display: block;
+  padding: 0.7rem;
+  background: #0b3d91;
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.account-secondary {
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 800px) {
+  .home-main {
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .home-account {
+    width: 100%;
+    order: -1;
+  }
+}

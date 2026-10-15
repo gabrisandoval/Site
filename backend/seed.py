@@ -18,12 +18,12 @@ def init_db():
 
     db = SessionLocal()
     try:
-        existing_admin = db.query(models.Employee).filter(
-            models.Employee.username == DEFAULT_ADMIN_USERNAME
+        existing_admin = db.query(models.User).filter(
+            models.User.username == DEFAULT_ADMIN_USERNAME
         ).first()
 
         if existing_admin is None:
-            admin = models.Employee(
+            admin = models.User(
                 username=DEFAULT_ADMIN_USERNAME,
                 password_hash=hash_password(DEFAULT_ADMIN_PASSWORD),
                 full_name="Amministratore",
