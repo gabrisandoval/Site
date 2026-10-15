@@ -1,0 +1,84 @@
+.mybookings-page {
+  min-height: 100vh;
+  background: #f4f6f8;
+}
+
+.mybookings-header {
+  background: #0b3d91;
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mybookings-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: white;
+}
+
+.mybookings-header a {
+  color: white;
+}
+
+.mybookings-main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.mybookings-main h2 {
+  margin: 0 0 1rem;
+}
+
+.mybookings-main h3 {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.mybookings-meta {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.mybookings-error {
+  background: #fdecea;
+  color: #b91c1c;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+}
+
+.booking-card {
+  background: white;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.booking-card p {
+  margin: 0.25rem 0 0;
+}
+
+.booking-card.past {
+  opacity: 0.6;
+}
+
+.booking-when {
+  text-transform: capitalize;
+}
+
+.booking-card button {
+  padding: 0.5rem 1rem;
+  background: white;
+  color: #b91c1c;
+  border: 1px solid #b91c1c;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}

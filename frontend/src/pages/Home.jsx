@@ -1,45 +1,78 @@
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { getServices } from '../api'
 import './Home.css'
-
-const SERVICES = [
-  {
-    id: 1,
-    name: 'CAF - 730 e ISEE',
-    description: 'Dichiarazione dei redditi, ISEE, IMU e pratiche fiscali.',
-  },
-  {
-    id: 2,
-    name: 'Patronato - NASpI e pensioni',
-    description: 'Assistenza per pratiche previdenziali e indennità.',
-  },
-  {
-    id: 3,
-    name: 'Sportello Lavoro',
-    description: 'Orientamento, curriculum e servizi per chi cerca lavoro.',
-  },
-]
 
 function Home() {
   const { user, isAuthenticated, logout } = useAuth()
+  const navigate = useNavigate()
+
+  // Customers book services; employees and admins manage them
+  const isCustomer = isAuthenticated && user?.role === 'customer'
+  const isStaff = isAuthenticated && user?.role !== 'customer'
+
+  const [services, setServices] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // Runs once, when the Home page appears on screen (the [] at the end)
+  useEffect(() => {
+    let ignore = false
+
+    async function loadServices() {
+      try {
+        const data = await getServices()
+        if (!ignore) setServices(data)
+      } catch (err) {
+        if (!ignore) setError(err.message)
+      } finally {
+        if (!ignore) setIsLoading(false)
+      }
+    }
+
+    loadServices()
+
+    // Cleanup function: if the page is closed before the server answers,
+    // we ignore the result instead of updating state that no longer exists
+    return () => {
+      ignore = true
+    }
+  }, [])
 
   return (
     <div className="home">
       <header className="home-header">
-        <h1>CISL App</h1>
+        <h1>Kasangga - Centro Servizi</h1>
       </header>
 
       <main className="home-main">
         <section className="home-services">
           <h2>I nostri servizi</h2>
 
-          {SERVICES.map((service) => (
+          {isLoading && <p className="home-message">Caricamento servizi...</p>}
+
+          {error && <p className="home-message home-error">{error}</p>}
+
+          {!isLoading && !error && services.length === 0 && (
+            <p className="home-message">Nessun servizio disponibile al momento.</p>
+          )}
+
+          {services.map((service) => (
             <article key={service.id} className="service-card">
               <h3>{service.name}</h3>
               <p>{service.description}</p>
-              {isAuthenticated ? (
-                <button>Prenota</button>
-              ) : (
+              <p className="service-hint">Durata: {service.duration_minutes} minuti</p>
+
+              {isCustomer && (
+                <button onClick={() => navigate(`/prenota/${service.id}`)}>Prenota</button>
+              )}
+
+              {isStaff && (
+                <button onClick={() => navigate('/dashboard')}>Modifica</button>
+              )}
+
+              {!isAuthenticated && (
                 <p className="service-hint">Accedi per prenotare</p>
               )}
             </article>
@@ -51,9 +84,14 @@ function Home() {
             {isAuthenticated ? (
               <>
                 <p>Benvenuto, {user?.full_name}</p>
-                {user?.role !== 'customer' && (
+                {isStaff && (
                   <Link to="/dashboard" className="account-link">
                     Vai all'area riservata
+                  </Link>
+                )}
+                {isCustomer && (
+                  <Link to="/le-mie-prenotazioni" className="account-link">
+                    Le mie prenotazioni
                   </Link>
                 )}
                 <button onClick={logout}>Esci</button>
