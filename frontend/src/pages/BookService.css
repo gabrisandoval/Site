@@ -1,0 +1,203 @@
+.book-page {
+  min-height: 100vh;
+  background: #f4f6f8;
+}
+
+.book-header {
+  background: #0b3d91;
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.book-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: white;
+}
+
+.book-header a {
+  color: white;
+}
+
+.book-main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.book-card {
+  background: white;
+  padding: 1.25rem 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.book-card h2,
+.book-card h3 {
+  margin: 0 0 0.75rem;
+}
+
+.book-card p {
+  margin: 0 0 0.5rem;
+}
+
+.book-meta {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.book-error {
+  background: #fdecea;
+  color: #b91c1c;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+}
+
+.book-success {
+  background: #e3f4e6;
+  color: #1e6b2e;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.book-success p {
+  margin: 0.25rem 0 0.5rem;
+}
+
+/* Calendar */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.calendar-title {
+  text-transform: capitalize;
+}
+
+.calendar-header button {
+  width: 2.2rem;
+  height: 2.2rem;
+  background: white;
+  color: #0b3d91;
+  border: 1px solid #0b3d91;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.calendar-header button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #666;
+  padding-bottom: 0.25rem;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  background: #f4f6f8;
+  color: #9ca3af;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: not-allowed;
+}
+
+.calendar-day.available {
+  background: #e8f0fb;
+  color: #0b3d91;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.calendar-day.available:hover {
+  background: #d3e2f7;
+}
+
+.calendar-day.selected {
+  background: #0b3d91;
+  color: white;
+}
+
+/* Time buttons */
+.time-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.time-button {
+  padding: 0.5rem 1rem;
+  background: white;
+  color: #0b3d91;
+  border: 1px solid #0b3d91;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.time-button.selected {
+  background: #0b3d91;
+  color: white;
+}
+
+/* Confirm */
+.book-card label {
+  display: block;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.book-card textarea {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.book-confirm {
+  margin-top: 1rem;
+  padding: 0.7rem 1.4rem;
+  background: #0b3d91;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.book-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* A step that is not available yet: faded and not clickable */
+.book-card.locked {
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}
+
+.book-card textarea:disabled {
+  background: #f4f6f8;
+  cursor: not-allowed;
+}

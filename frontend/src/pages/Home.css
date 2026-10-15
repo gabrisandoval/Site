@@ -32,6 +32,14 @@
   margin: 0 0 1rem;
 }
 
+.home-message {
+  color: #6b7280;
+}
+
+.home-error {
+  color: #b91c1c;
+}
+
 .service-card {
   background: white;
   padding: 1rem 1.5rem;
