@@ -141,3 +141,18 @@ export function cancelBooking(token, bookingId) {
 export function getAllBookings(token) {
   return request('/staff/bookings', { token })
 }
+
+// ---------- Users (admin only) ----------
+// Every account: admins, employees and customers
+export function getUsers(token) {
+  return request('/admin/users', { token })
+}
+
+// data = { full_name, username, password, role: 'employee' | 'admin' }
+export function createStaff(token, data) {
+  return request('/admin/employees', { method: 'POST', body: data, token })
+}
+
+export function deleteStaff(token, id) {
+  return request(`/admin/employees/${id}`, { method: 'DELETE', token })
+}

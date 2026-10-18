@@ -69,7 +69,9 @@ function Home() {
               )}
 
               {isStaff && (
-                <button onClick={() => navigate('/dashboard')}>Modifica</button>
+                <button onClick={() => navigate(`/dashboard?service=${service.id}`)}>
+                  Modifica
+                </button>
               )}
 
               {!isAuthenticated && (

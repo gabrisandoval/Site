@@ -3,7 +3,7 @@ import datetime
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Literal
 
 from database import get_db
 import models
@@ -11,7 +11,7 @@ import schemas
 import auth
 from seed import init_db
 
-app = FastAPI(title="CISL-App Backend", version="0.5.0")
+app = FastAPI(title="CISL-App Backend", version="0.6.0")
 
 # In development we allow the React frontend (e.g. on localhost:5173) to call the API.
 app.add_middleware(
@@ -96,6 +96,19 @@ def change_password(
 
 
 # ---------- STAFF MANAGEMENT (admin only) ----------
+@app.get("/admin/users", response_model=List[schemas.UserOut])
+def list_users(
+    role: Literal["admin", "employee", "customer"] | None = None,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth.require_admin),
+):
+    """Every account (customers included), with an optional filter by role."""
+    query = db.query(models.User)
+    if role:
+        query = query.filter(models.User.role == role)
+    return query.order_by(models.User.id).all()
+
+
 @app.get("/admin/employees", response_model=List[schemas.UserOut])
 def list_employees(
     db: Session = Depends(get_db),
@@ -147,6 +160,10 @@ def delete_employee(
     if not user:
         raise HTTPException(status_code=404, detail="Dipendente non trovato")
 
+    # The services this person created stay: they just lose the "created by" link
+    db.query(models.Service).filter(models.Service.created_by == user.id).update(
+        {"created_by": None}
+    )
     db.delete(user)
     db.commit()
     return {"status": "ok", "message": "Dipendente eliminato"}

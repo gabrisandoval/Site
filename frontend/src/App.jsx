@@ -5,6 +5,8 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
+import StaffBookings from './pages/StaffBookings'
+import AdminUsers from './pages/AdminUsers'
 import BookService from './pages/BookService'
 import MyBookings from './pages/MyBookings'
 
@@ -21,6 +23,22 @@ function App() {
             element={
               <ProtectedRoute roles={['admin', 'employee']}>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/prenotazioni"
+            element={
+              <ProtectedRoute roles={['admin', 'employee']}>
+                <StaffBookings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/utenti"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <AdminUsers />
               </ProtectedRoute>
             }
           />
