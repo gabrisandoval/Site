@@ -194,3 +194,7 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.dash-focus {
+  margin: 0 0 1rem;
+}

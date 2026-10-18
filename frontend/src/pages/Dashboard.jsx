@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   getAllServices,
@@ -13,6 +13,11 @@ import './Dashboard.css'
 function Dashboard() {
   const { user, token, logout } = useAuth()
   const navigate = useNavigate()
+
+  // "/dashboard?service=3" -> focusId is '3': show only that service.
+  // "/dashboard" -> focusId is null: show all the services.
+  const [searchParams] = useSearchParams()
+  const focusId = searchParams.get('service')
 
   const [services, setServices] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -42,7 +47,21 @@ function Dashboard() {
     async function loadServices() {
       try {
         const data = await getAllServices(token)
-        if (!ignore) setServices(data)
+        if (ignore) return
+        setServices(data)
+
+        // Coming from a "Modifica" button: open the edit form of that service right away
+        const target = focusId && data.find((s) => String(s.id) === focusId)
+        if (target) {
+          setEditingId(target.id)
+          setEditForm({
+            name: target.name,
+            description: target.description,
+            duration_minutes: String(target.duration_minutes),
+          })
+        } else {
+          setEditingId(null)
+        }
       } catch (err) {
         if (!ignore) setError(err.message)
       } finally {
@@ -55,7 +74,7 @@ function Dashboard() {
     return () => {
       ignore = true
     }
-  }, [token])
+  }, [token, focusId])
 
   function handleLogout() {
     logout()
@@ -170,6 +189,11 @@ function Dashboard() {
     }
   }
 
+  // In focus mode only the chosen service is listed
+  const shownServices = focusId
+    ? services.filter((s) => String(s.id) === focusId)
+    : services
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -180,6 +204,8 @@ function Dashboard() {
           </p>
         </div>
         <div className="dashboard-actions">
+          <Link to="/dashboard/prenotazioni">Prenotazioni</Link>
+          {user?.role === 'admin' && <Link to="/admin/utenti">Utenti</Link>}
           <Link to="/">Vai al sito</Link>
           <button onClick={handleLogout}>Esci</button>
         </div>
@@ -187,19 +213,27 @@ function Dashboard() {
 
       <main className="dashboard-main">
         <section>
-          <h2>Servizi</h2>
+          <h2>{focusId ? 'Servizio selezionato' : 'Servizi'}</h2>
+
+          {focusId && (
+            <p className="dash-focus">
+              <Link to="/dashboard">← Mostra tutti i servizi</Link>
+            </p>
+          )}
 
           {error && <p className="dash-error">{error}</p>}
 
           {isLoading && <p className="dash-message">Caricamento servizi...</p>}
 
-          {!isLoading && services.length === 0 && (
+          {!isLoading && shownServices.length === 0 && (
             <p className="dash-message">
-              Nessun servizio ancora. Aggiungine uno dal form.
+              {focusId
+                ? 'Servizio non trovato.'
+                : 'Nessun servizio ancora. Aggiungine uno dal form.'}
             </p>
           )}
 
-          {services.map((service) => (
+          {shownServices.map((service) => (
             <article key={service.id} className="dash-service">
               {editingId === service.id ? (
                 <form className="dash-edit-form" onSubmit={handleSaveEdit}>
@@ -283,40 +317,42 @@ function Dashboard() {
           ))}
         </section>
 
-        <section>
-          <h2>Nuovo servizio</h2>
-          <form className="dash-form" onSubmit={handleAddService}>
-            <label htmlFor="new-name">Nome</label>
-            <input
-              id="new-name"
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
+        {!focusId && (
+          <section>
+            <h2>Nuovo servizio</h2>
+            <form className="dash-form" onSubmit={handleAddService}>
+              <label htmlFor="new-name">Nome</label>
+              <input
+                id="new-name"
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
 
-            <label htmlFor="new-description">Descrizione</label>
-            <input
-              id="new-description"
-              type="text"
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-            />
+              <label htmlFor="new-description">Descrizione</label>
+              <input
+                id="new-description"
+                type="text"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+              />
 
-            <label htmlFor="new-duration">Durata (minuti)</label>
-            <input
-              id="new-duration"
-              type="number"
-              min="5"
-              max="480"
-              value={newDuration}
-              onChange={(e) => setNewDuration(e.target.value)}
-            />
+              <label htmlFor="new-duration">Durata (minuti)</label>
+              <input
+                id="new-duration"
+                type="number"
+                min="5"
+                max="480"
+                value={newDuration}
+                onChange={(e) => setNewDuration(e.target.value)}
+              />
 
-            <button type="submit" disabled={isSaving}>
-              {isSaving ? 'Salvataggio...' : 'Aggiungi servizio'}
-            </button>
-          </form>
-        </section>
+              <button type="submit" disabled={isSaving}>
+                {isSaving ? 'Salvataggio...' : 'Aggiungi servizio'}
+              </button>
+            </form>
+          </section>
+        )}
       </main>
     </div>
   )
