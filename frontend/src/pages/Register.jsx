@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext'
 import { previewUsername } from '../utils/username'
 import { FISCAL_CODE_REGEX, todayISO } from '../utils/identity'
 import { CITIZENSHIPS, OTHER_CITIZENSHIP } from '../utils/citizenships'
+import { sortServerError } from '../utils/serverErrors'
+import FormErrors from '../components/FormErrors'
 import './Register.css'
 
 // Same rule as the backend: optional "+", then digits and spaces, 6 to 20 characters
@@ -30,7 +32,9 @@ function Register() {
     password: '',
     confirm: '',
   })
-  const [error, setError] = useState('')
+  // What is wrong: { fieldName: sentence } for the fields, plus sentences about no field
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [generalErrors, setGeneralErrors] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   // After a successful registration we show the username the server assigned
   const [createdUsername, setCreatedUsername] = useState('')
@@ -38,75 +42,77 @@ function Register() {
   const navigate = useNavigate()
 
   function handleChange(event) {
-    setForm({ ...form, [event.target.name]: event.target.value })
+    const { name, value } = event.target
+    setForm({ ...form, [name]: value })
+
+    // The person is fixing this field: remove its red mark
+    const errorKey = name === 'citizenship_other' ? 'citizenship' : name
+    if (fieldErrors[errorKey]) {
+      const { [errorKey]: _fixed, ...others } = fieldErrors
+      setFieldErrors(others)
+    }
   }
 
+  // Check the whole form and return { fieldName: "what is wrong" } (empty = all good)
   function validate() {
-    if (form.first_name.trim().length < 2) {
-      return 'Inserisci il nome.'
+    const problems = {}
+    const fiscalCode = form.fiscal_code.trim().toUpperCase()
+
+    if (form.first_name.trim().length < 2) problems.first_name = 'Nome: inserisci almeno 2 lettere.'
+    else if (form.first_name.trim().length > 50) problems.first_name = 'Nome: troppo lungo (massimo 50 caratteri).'
+    if (form.last_name.trim().length < 2) problems.last_name = 'Cognome: inserisci almeno 2 lettere.'
+    else if (form.last_name.trim().length > 50) problems.last_name = 'Cognome: troppo lungo (massimo 50 caratteri).'
+    if (!problems.first_name && !problems.last_name && !previewUsername(form.first_name, form.last_name)) {
+      problems.first_name = 'Nome e cognome: devono contenere delle lettere.'
     }
-    if (form.last_name.trim().length < 2) {
-      return 'Inserisci il cognome.'
+    if (!form.gender) problems.gender = "Sesso: selezionalo dall'elenco."
+    if (!form.birth_date) problems.birth_date = 'Data di nascita: mancante.'
+    else if (form.birth_date > todayISO()) problems.birth_date = 'Data di nascita: non può essere nel futuro.'
+    if (!fiscalCode) problems.fiscal_code = 'Codice fiscale: mancante.'
+    else if (!FISCAL_CODE_REGEX.test(fiscalCode)) {
+      problems.fiscal_code = `Codice fiscale: servono 16 caratteri tra lettere e cifre (ne hai scritti ${fiscalCode.length}).`
     }
-    if (!previewUsername(form.first_name, form.last_name)) {
-      return 'Nome e cognome devono contenere delle lettere.'
+    if (form.address.trim().length < 5) problems.address = 'Via di residenza: mancante o troppo corta (almeno 5 caratteri).'
+    else if (form.address.trim().length > 150) problems.address = 'Via di residenza: troppo lunga (massimo 150 caratteri).'
+    if (form.city.trim().length < 2) problems.city = 'Città: mancante.'
+    if (!POSTAL_CODE_REGEX.test(form.postal_code.trim())) problems.postal_code = 'CAP: deve avere 5 cifre.'
+    if (!form.phone.trim()) problems.phone = 'Telefono: mancante.'
+    else if (!PHONE_REGEX.test(form.phone.trim())) {
+      problems.phone = 'Telefono: usa solo cifre e spazi (un + iniziale è ammesso), da 6 a 20 caratteri.'
     }
-    if (!form.gender) {
-      return 'Seleziona il sesso.'
-    }
-    if (!form.birth_date) {
-      return 'Inserisci la data di nascita.'
-    }
-    if (form.birth_date > todayISO()) {
-      return 'La data di nascita non può essere nel futuro.'
-    }
-    if (!FISCAL_CODE_REGEX.test(form.fiscal_code.trim().toUpperCase())) {
-      return 'Il codice fiscale deve avere 16 caratteri tra lettere e cifre.'
-    }
-    if (form.address.trim().length < 5) {
-      return 'Inserisci la via di residenza.'
-    }
-    if (form.city.trim().length < 2) {
-      return 'Inserisci la città di residenza.'
-    }
-    if (!POSTAL_CODE_REGEX.test(form.postal_code.trim())) {
-      return 'Il CAP deve avere 5 cifre.'
-    }
-    if (!PHONE_REGEX.test(form.phone.trim())) {
-      return 'Inserisci un numero di telefono valido (solo cifre, spazi e un + iniziale).'
-    }
-    if (!form.citizenship) {
-      return 'Scegli la cittadinanza dall\'elenco.'
-    }
-    if (form.citizenship === OTHER_CITIZENSHIP && form.citizenship_other.trim().length < 2) {
-      return 'Scrivi la tua cittadinanza.'
+    if (!form.citizenship) problems.citizenship = "Cittadinanza: scegli una voce dall'elenco."
+    else if (form.citizenship === OTHER_CITIZENSHIP && form.citizenship_other.trim().length < 2) {
+      problems.citizenship = 'Cittadinanza: scrivi la tua cittadinanza.'
     }
     // The email is optional: we check it only if the person typed something
     if (form.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())) {
-      return 'Inserisci un indirizzo email valido oppure lascia il campo vuoto.'
+      problems.email = 'Email: indirizzo non valido (oppure lascia il campo vuoto).'
     }
-    if (form.password.length < 8) {
-      return 'La password deve avere almeno 8 caratteri.'
+    if (!form.password) problems.password = 'Password: mancante.'
+    else if (form.password.length < 8) {
+      problems.password = `Password: troppo corta (${form.password.length} caratteri, ne servono almeno 8).`
+    } else if (new TextEncoder().encode(form.password).length > 72) {
+      // The server counts bytes: accented letters and symbols take more than one
+      problems.password = 'Password: troppo lunga (massimo 72 caratteri; lettere accentate e simboli ne contano di più).'
     }
-    if (form.password.length > 72) {
-      return 'La password può avere al massimo 72 caratteri.'
+    if (form.password && form.password !== form.confirm) {
+      problems.confirm = 'Le due password non coincidono.'
     }
-    if (form.password !== form.confirm) {
-      return 'Le due password non coincidono.'
-    }
-    return ''
+    return problems
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
 
-    const validationError = validate()
-    if (validationError) {
-      setError(validationError)
+    const problems = validate()
+    if (Object.keys(problems).length > 0) {
+      setFieldErrors(problems)
+      setGeneralErrors([])
       return
     }
 
-    setError('')
+    setFieldErrors({})
+    setGeneralErrors([])
     setIsSubmitting(true)
 
     try {
@@ -131,7 +137,10 @@ function Register() {
       saveSession(data)
       setCreatedUsername(data.username)
     } catch (err) {
-      setError(err.message)
+      // The server refused: show its sentences and mark the fields they are about
+      const { marked, general } = sortServerError(err.message)
+      setFieldErrors(marked)
+      setGeneralErrors(general)
     } finally {
       setIsSubmitting(false)
     }
@@ -157,7 +166,7 @@ function Register() {
 
   return (
     <div className="register-page">
-      <form className="register-form" onSubmit={handleSubmit}>
+      <form className="register-form" onSubmit={handleSubmit} noValidate>
         <h1>Crea il tuo account</h1>
 
         <div className="register-row">
@@ -166,6 +175,7 @@ function Register() {
             <input
               id="first_name"
               name="first_name"
+          className={fieldErrors.first_name ? 'field-invalid' : undefined}
               type="text"
               value={form.first_name}
               onChange={handleChange}
@@ -176,6 +186,7 @@ function Register() {
             <input
               id="last_name"
               name="last_name"
+          className={fieldErrors.last_name ? 'field-invalid' : undefined}
               type="text"
               value={form.last_name}
               onChange={handleChange}
@@ -190,7 +201,13 @@ function Register() {
         <div className="register-row">
           <div>
             <label htmlFor="gender">Sesso</label>
-            <select id="gender" name="gender" value={form.gender} onChange={handleChange}>
+            <select
+              id="gender"
+              name="gender"
+              className={fieldErrors.gender ? 'field-invalid' : undefined}
+              value={form.gender}
+              onChange={handleChange}
+            >
               <option value="">Seleziona...</option>
               <option value="M">Maschio</option>
               <option value="F">Femmina</option>
@@ -201,6 +218,7 @@ function Register() {
             <input
               id="birth_date"
               name="birth_date"
+          className={fieldErrors.birth_date ? 'field-invalid' : undefined}
               type="date"
               max={todayISO()}
               value={form.birth_date}
@@ -215,7 +233,7 @@ function Register() {
           name="fiscal_code"
           type="text"
           maxLength="16"
-          className="register-upper"
+          className={`register-upper ${fieldErrors.fiscal_code ? 'field-invalid' : ''}`}
           value={form.fiscal_code}
           onChange={handleChange}
         />
@@ -224,6 +242,7 @@ function Register() {
         <input
           id="address"
           name="address"
+          className={fieldErrors.address ? 'field-invalid' : undefined}
           type="text"
           placeholder="Es. Via Roma 12"
           value={form.address}
@@ -234,6 +253,7 @@ function Register() {
         <input
           id="city"
           name="city"
+          className={fieldErrors.city ? 'field-invalid' : undefined}
           type="text"
           placeholder="Es. Milano"
           value={form.city}
@@ -244,6 +264,7 @@ function Register() {
         <input
           id="postal_code"
           name="postal_code"
+          className={fieldErrors.postal_code ? 'field-invalid' : undefined}
           type="text"
           inputMode="numeric"
           maxLength="5"
@@ -256,6 +277,7 @@ function Register() {
         <input
           id="phone"
           name="phone"
+          className={fieldErrors.phone ? 'field-invalid' : undefined}
           type="tel"
           placeholder="Es. +39 333 1234567"
           value={form.phone}
@@ -266,6 +288,7 @@ function Register() {
         <select
           id="citizenship"
           name="citizenship"
+          className={fieldErrors.citizenship ? 'field-invalid' : undefined}
           value={form.citizenship}
           onChange={handleChange}
         >
@@ -284,6 +307,7 @@ function Register() {
             <input
               id="citizenship_other"
               name="citizenship_other"
+              className={fieldErrors.citizenship ? 'field-invalid' : undefined}
               type="text"
               placeholder="Es. Cambogiana"
               value={form.citizenship_other}
@@ -296,6 +320,7 @@ function Register() {
         <input
           id="email"
           name="email"
+          className={fieldErrors.email ? 'field-invalid' : undefined}
           type="email"
           value={form.email}
           onChange={handleChange}
@@ -305,6 +330,7 @@ function Register() {
         <input
           id="password"
           name="password"
+          className={fieldErrors.password ? 'field-invalid' : undefined}
           type="password"
           value={form.password}
           onChange={handleChange}
@@ -314,16 +340,20 @@ function Register() {
         <input
           id="confirm"
           name="confirm"
+          className={fieldErrors.confirm ? 'field-invalid' : undefined}
           type="password"
           value={form.confirm}
           onChange={handleChange}
         />
 
-        {error && <p className="register-error">{error}</p>}
-
         <button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Registrazione in corso...' : 'Registrati'}
         </button>
+
+        <FormErrors
+          items={[...Object.values(fieldErrors), ...generalErrors]}
+          title="Non posso creare l'account:"
+        />
 
         <p className="register-back">
           Hai già un account? <Link to="/">Torna alla Home</Link>

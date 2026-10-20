@@ -71,7 +71,7 @@ function App() {
           <Route
             path="/profilo"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={['employee', 'customer']}>
                 <Profile />
               </ProtectedRoute>
             }
