@@ -206,3 +206,91 @@
   font-size: 0.85rem;
   cursor: pointer;
 }
+
+.au-upper {
+  text-transform: uppercase;
+}
+
+/* The two buttons above the content */
+.au-tabs {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.au-tab {
+  padding: 0.7rem 1.4rem;
+  background: white;
+  color: #0b3d91;
+  border: 2px solid #0b3d91;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.au-tab.active {
+  background: #0b3d91;
+  color: white;
+}
+
+/* Wider page: the accounts table has many columns */
+.au-main {
+  max-width: 1500px;
+}
+
+.au-table {
+  font-size: 0.88rem;
+}
+
+.au-table th,
+.au-table td {
+  padding: 0.6rem;
+}
+
+/* Search bar with a magnifying glass inside */
+.au-search-box {
+  position: relative;
+}
+
+.au-search-icon {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  pointer-events: none; /* clicks go through to the input */
+}
+
+.au-search-box .au-search {
+  padding-left: 2.2rem; /* room for the icon */
+}
+
+/* Create form: fields with a problem and the summary box at the bottom */
+.au-form .au-invalid {
+  border-color: #b91c1c;
+  background: #fff5f5;
+}
+
+.au-form .au-invalid:focus {
+  outline: 2px solid rgba(185, 28, 28, 0.35);
+}
+
+.au-form-errors {
+  grid-column: 1 / -1;
+  margin-top: 0.5rem;
+  padding: 0.9rem 1.1rem;
+  background: #fdecea;
+  border: 1px solid #f5c2c0;
+  border-left: 4px solid #b91c1c;
+  border-radius: 8px;
+  color: #7f1d1d;
+}
+
+.au-form-errors ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.au-form-errors li {
+  margin: 0.2rem 0;
+}

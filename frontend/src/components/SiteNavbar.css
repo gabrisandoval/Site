@@ -1,0 +1,31 @@
+.site-navbar {
+  box-sizing: border-box;
+  min-height: 72px; /* the same height on every page */
+  padding: 0.5rem 2rem;
+  background: #0b3d91;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.site-brand {
+  color: white;
+  text-decoration: none;
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.site-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+/* Plain white link, for the right side of the navbar */
+.site-link {
+  color: white;
+}

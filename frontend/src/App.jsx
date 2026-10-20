@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
+import ServicesManager from './pages/ServicesManager'
 import StaffBookings from './pages/StaffBookings'
 import AdminUsers from './pages/AdminUsers'
 import BookService from './pages/BookService'
@@ -23,6 +24,14 @@ function App() {
             element={
               <ProtectedRoute roles={['admin', 'employee']}>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/servizi"
+            element={
+              <ProtectedRoute roles={['admin', 'employee']}>
+                <ServicesManager />
               </ProtectedRoute>
             }
           />

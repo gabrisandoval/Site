@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getUsers, createStaff, deleteStaff } from '../api'
+import { getUsers, createStaff, deleteUser } from '../api'
+import { previewUsername } from '../utils/username'
+import { FISCAL_CODE_REGEX, todayISO } from '../utils/identity'
+import StaffNavbar from '../components/StaffNavbar'
+import PageTop from '../components/PageTop'
+import ConfirmDialog from '../components/ConfirmDialog'
 import './AdminUsers.css'
 
 const ROLE_LABELS = {
@@ -28,11 +32,128 @@ function formatDate(isoDateTime) {
   })
 }
 
-const EMPTY_FORM = { full_name: '', username: '', password: '', role: 'employee' }
+// "1985-12-10" -> "10 dic 1985". We build the date from its parts because
+// new Date("1985-12-10") would be read as UTC and could show the previous day.
+function formatBirthDate(isoDate) {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString('it-IT', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+// Same rule as the backend: optional "+", then digits and spaces, 6 to 20 characters
+const PHONE_REGEX = /^\+?[0-9 ]{6,20}$/
+
+// Check the whole form at once and return { fieldName: "what is wrong" }.
+// An empty object means the form is valid. Same rules as the backend.
+function validateForm(form) {
+  const problems = {}
+
+  if (form.first_name.trim().length < 2) {
+    problems.first_name = 'Nome: inserisci almeno 2 lettere.'
+  } else if (form.first_name.trim().length > 50) {
+    problems.first_name = 'Nome: troppo lungo (massimo 50 caratteri).'
+  } else if (!previewUsername(form.first_name, form.last_name)) {
+    problems.first_name = 'Nome: deve contenere delle lettere.'
+  }
+  if (form.last_name.trim().length < 2) {
+    problems.last_name = 'Cognome: inserisci almeno 2 lettere.'
+  } else if (form.last_name.trim().length > 50) {
+    problems.last_name = 'Cognome: troppo lungo (massimo 50 caratteri).'
+  } else if (!previewUsername(form.first_name, form.last_name)) {
+    problems.last_name = 'Cognome: deve contenere delle lettere.'
+  }
+  if (!form.gender) {
+    problems.gender = 'Sesso: selezionalo dall\'elenco.'
+  }
+  if (!form.birth_date) {
+    problems.birth_date = 'Data di nascita: mancante.'
+  } else if (form.birth_date > todayISO()) {
+    problems.birth_date = 'Data di nascita: non può essere nel futuro.'
+  }
+  const fiscalCode = form.fiscal_code.trim().toUpperCase()
+  if (!fiscalCode) {
+    problems.fiscal_code = 'Codice fiscale: mancante.'
+  } else if (!FISCAL_CODE_REGEX.test(fiscalCode)) {
+    problems.fiscal_code = `Codice fiscale: servono 16 caratteri tra lettere e cifre (ne hai scritti ${fiscalCode.length}).`
+  }
+  if (form.city.trim().length < 2) {
+    problems.city = 'Città: mancante.'
+  } else if (form.city.trim().length > 80) {
+    problems.city = 'Città: troppo lunga (massimo 80 caratteri).'
+  }
+  if (!form.postal_code.trim()) {
+    problems.postal_code = 'CAP: mancante.'
+  } else if (!/^[0-9]{5}$/.test(form.postal_code.trim())) {
+    problems.postal_code = 'CAP: deve avere 5 cifre.'
+  }
+  if (form.address.trim().length < 5) {
+    problems.address = 'Via di residenza: mancante o troppo corta (almeno 5 caratteri).'
+  } else if (form.address.trim().length > 150) {
+    problems.address = 'Via di residenza: troppo lunga (massimo 150 caratteri).'
+  }
+  if (!form.phone.trim()) {
+    problems.phone = 'Telefono: mancante.'
+  } else if (!PHONE_REGEX.test(form.phone.trim())) {
+    problems.phone = 'Telefono: usa solo cifre e spazi (un + iniziale è ammesso), da 6 a 20 caratteri.'
+  }
+  if (!form.password) {
+    problems.password = 'Password: mancante.'
+  } else if (form.password.length < 8) {
+    problems.password = `Password: troppo corta (${form.password.length} caratteri, ne servono almeno 8).`
+  } else if (new TextEncoder().encode(form.password).length > 72) {
+    // The server counts bytes, and accented letters or symbols take more than one
+    problems.password = 'Password: troppo lunga (massimo 72 caratteri; lettere accentate e simboli ne contano di più).'
+  }
+
+  return problems
+}
+
+// The server writes its problems as "Label: text." sentences: the label tells which
+// field to mark. Other messages (e.g. a duplicate fiscal code) are matched by keywords.
+const LABEL_TO_FIELD = {
+  Nome: 'first_name',
+  Cognome: 'last_name',
+  'Codice fiscale': 'fiscal_code',
+  'Data di nascita': 'birth_date',
+  Sesso: 'gender',
+  Password: 'password',
+  'Via di residenza': 'address',
+  Città: 'city',
+  CAP: 'postal_code',
+  Telefono: 'phone',
+}
+
+function fieldOfServerError(text) {
+  const label = text.split(':')[0].trim()
+  if (LABEL_TO_FIELD[label]) return LABEL_TO_FIELD[label]
+
+  const lower = text.toLowerCase()
+  if (lower.includes('codice fiscale')) return 'fiscal_code'
+  if (lower.includes('nascita')) return 'birth_date'
+  if (lower.includes('telefono')) return 'phone'
+  if (lower.includes('password')) return 'password'
+  return null
+}
+
+const EMPTY_FORM = {
+  first_name: '',
+  last_name: '',
+  gender: '',
+  birth_date: '',
+  fiscal_code: '',
+  address: '',
+  city: '',
+  postal_code: '',
+  phone: '',
+  password: '',
+  role: 'employee',
+}
 
 function AdminUsers() {
-  const { user, token, logout } = useAuth()
-  const navigate = useNavigate()
+  const { token } = useAuth()
 
   const [users, setUsers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -41,9 +162,19 @@ function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState('all')
   const [search, setSearch] = useState('')
 
+  // Which section is open: 'list' = manage accounts, 'create' = new employee form
+  const [view, setView] = useState('list')
+
   const [form, setForm] = useState(EMPTY_FORM)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState('')
+
+  // Problems of the create form: { fieldName: text } plus an optional general text
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [formError, setFormError] = useState('')
+
+  // The account the admin is about to delete (null = no confirmation box open)
+  const [accountToDelete, setAccountToDelete] = useState(null)
 
   // Load every account when the page opens
   useEffect(() => {
@@ -67,69 +198,110 @@ function AdminUsers() {
     }
   }, [token])
 
-  function handleLogout() {
-    logout()
-    navigate('/')
+  function changeView(nextView) {
+    setView(nextView)
+    setError('')
+    setMessage('')
+    setFieldErrors({})
+    setFormError('')
   }
 
   // One handler for all the inputs: the "name" attribute tells which field to change
   function handleChange(event) {
-    setForm({ ...form, [event.target.name]: event.target.value })
+    const { name, value } = event.target
+    setForm({ ...form, [name]: value })
+
+    // The admin is fixing this field: remove its red mark right away
+    if (fieldErrors[name]) {
+      const { [name]: _fixed, ...others } = fieldErrors
+      setFieldErrors(others)
+    }
   }
 
   async function handleCreate(event) {
     event.preventDefault()
 
-    if (form.full_name.trim().length < 2) {
-      setError('Inserisci nome e cognome.')
-      return
-    }
-    if (!/^[A-Za-z0-9_.-]{3,30}$/.test(form.username)) {
-      setError(
-        "L'username deve avere da 3 a 30 caratteri: lettere, numeri, punto, trattino o underscore."
-      )
-      return
-    }
-    if (form.password.length < 8 || form.password.length > 72) {
-      setError('La password deve avere da 8 a 72 caratteri.')
+    const problems = validateForm(form)
+    if (Object.keys(problems).length > 0) {
+      setFieldErrors(problems)
+      setFormError('')
       return
     }
 
     setError('')
     setMessage('')
+    setFieldErrors({})
+    setFormError('')
     setIsSaving(true)
 
     try {
       const created = await createStaff(token, {
-        full_name: form.full_name.trim(),
-        username: form.username,
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        gender: form.gender,
+        birth_date: form.birth_date,
+        fiscal_code: form.fiscal_code.trim().toUpperCase(),
+        address: form.address.trim(),
+        city: form.city.trim(),
+        postal_code: form.postal_code.trim(),
+        phone: form.phone.trim(),
         password: form.password,
         role: form.role,
       })
       setUsers([...users, created])
       setForm(EMPTY_FORM)
-      setMessage(`Account creato: ${created.full_name} (${ROLE_LABELS[created.role]}).`)
+      setMessage(
+        `Account creato: ${created.full_name} (${ROLE_LABELS[created.role]}). Username: ${created.username}`,
+      )
+      // Go to the list so the new account is visible right away
+      setView('list')
     } catch (err) {
-      setError(err.message)
+      // Server refused: show its sentence at the bottom and mark the field it is about
+      const text = String(err.message || 'Errore durante la creazione dell\'account.')
+      // The server may list several problems, one sentence each ("Telefono: ... Password: ...")
+      const sentences = text.split(/(?<=\.) /).filter(Boolean)
+      const marked = {}
+      let general = []
+      for (const sentence of sentences) {
+        const field = fieldOfServerError(sentence)
+        if (field && !marked[field]) marked[field] = sentence
+        else general.push(sentence)
+      }
+      setFieldErrors(marked)
+      setFormError(general.join(' '))
     } finally {
       setIsSaving(false)
     }
   }
 
-  async function handleDelete(account) {
-    if (!window.confirm(`Eliminare l'account di ${account.full_name}?`)) {
-      return
-    }
+  // Called when the admin presses "Elimina" inside the confirmation box
+  async function handleConfirmDelete() {
+    const account = accountToDelete
+    setAccountToDelete(null)
 
     setError('')
     setMessage('')
     try {
-      await deleteStaff(token, account.id)
+      const result = await deleteUser(token, account.id)
       setUsers(users.filter((u) => u.id !== account.id))
+      setMessage(
+        result.deleted_bookings > 0
+          ? `Account di ${account.full_name} eliminato. Cancellate anche ${result.deleted_bookings} prenotazioni.`
+          : `Account di ${account.full_name} eliminato.`,
+      )
     } catch (err) {
       setError(err.message)
     }
   }
+
+  // Red border for a field with a problem
+  function invalid(name) {
+    return fieldErrors[name] ? 'au-invalid' : undefined
+  }
+
+  // The list shown at the bottom of the form: every local problem, or the server sentence
+  const problemList = Object.values(fieldErrors)
+  const showFormError = Boolean(formError)
 
   // How many accounts for each role, shown on the filter buttons
   function countOf(role) {
@@ -145,154 +317,344 @@ function AdminUsers() {
         !searchText ||
         u.full_name.toLowerCase().includes(searchText) ||
         u.username.toLowerCase().includes(searchText) ||
-        (u.email || '').toLowerCase().includes(searchText)
+        (u.email || '').toLowerCase().includes(searchText) ||
+        (u.fiscal_code || '').toLowerCase().includes(searchText) ||
+        (u.phone || '').includes(searchText) ||
+        (u.address || '').toLowerCase().includes(searchText) ||
+        (u.city || '').toLowerCase().includes(searchText) ||
+        (u.postal_code || '').includes(searchText) ||
+        (u.citizenship || '').toLowerCase().includes(searchText),
     )
 
   return (
     <div className="au-page">
-      <header className="au-header">
-        <div>
-          <h1>Utenti</h1>
-          <p>
-            {user?.full_name} ({user?.role})
-          </p>
-        </div>
-        <div className="au-actions">
-          <Link to="/dashboard">← Area riservata</Link>
-          <Link to="/">Vai al sito</Link>
-          <button onClick={handleLogout}>Esci</button>
-        </div>
-      </header>
+      <StaffNavbar />
 
       <main className="au-main">
-        <section className="au-card">
-          <h2>Nuovo dipendente</h2>
-          <form className="au-form" onSubmit={handleCreate}>
-            <div>
-              <label htmlFor="full_name">Nome e cognome</label>
-              <input
-                id="full_name"
-                name="full_name"
-                type="text"
-                value={form.full_name}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="username">Username</label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                value={form.username}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="password">Password (almeno 8 caratteri)</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={form.password}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="role">Ruolo</label>
-              <select id="role" name="role" value={form.role} onChange={handleChange}>
-                <option value="employee">Dipendente</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            <button type="submit" disabled={isSaving}>
-              {isSaving ? 'Creazione...' : 'Crea account'}
-            </button>
-          </form>
-          <p className="au-meta">
-            Un dipendente gestisce servizi e orari. Un admin può anche creare ed eliminare
-            gli account del personale.
-          </p>
-        </section>
+        <PageTop title="Utenti" />
+
+        <div className="au-tabs">
+          <button
+            type="button"
+            className={view === 'create' ? 'au-tab active' : 'au-tab'}
+            onClick={() => changeView('create')}
+          >
+            Crea dipendente
+          </button>
+          <button
+            type="button"
+            className={view === 'list' ? 'au-tab active' : 'au-tab'}
+            onClick={() => changeView('list')}
+          >
+            Gestisci account ({users.length})
+          </button>
+        </div>
 
         {error && <p className="au-error">{error}</p>}
         {message && <p className="au-success">{message}</p>}
 
-        <section className="au-card">
-          <h2>Tutti gli account</h2>
-
-          <div className="au-toolbar">
-            <div className="au-filters">
-              {ROLE_FILTERS.map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  className={roleFilter === item.value ? 'au-filter active' : 'au-filter'}
-                  onClick={() => setRoleFilter(item.value)}
+        {view === 'create' && (
+          <section className="au-card">
+            <h2>Nuovo dipendente</h2>
+            <form className="au-form" onSubmit={handleCreate} noValidate>
+              <div>
+                <label htmlFor="first_name">Nome</label>
+                <input
+                  id="first_name"
+                  name="first_name"
+                  aria-invalid={Boolean(fieldErrors.first_name)}
+                  className={invalid('first_name')}
+                  type="text"
+                  value={form.first_name}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="last_name">Cognome</label>
+                <input
+                  id="last_name"
+                  name="last_name"
+                  aria-invalid={Boolean(fieldErrors.last_name)}
+                  className={invalid('last_name')}
+                  type="text"
+                  value={form.last_name}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="gender">Sesso</label>
+                <select
+                  id="gender"
+                  name="gender"
+                  className={invalid('gender')}
+                  value={form.gender}
+                  onChange={handleChange}
                 >
-                  {item.label} ({countOf(item.value)})
-                </button>
-              ))}
+                  <option value="">Seleziona...</option>
+                  <option value="M">Maschio</option>
+                  <option value="F">Femmina</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="birth_date">Data di nascita</label>
+                <input
+                  id="birth_date"
+                  name="birth_date"
+                  aria-invalid={Boolean(fieldErrors.birth_date)}
+                  className={invalid('birth_date')}
+                  type="date"
+                  max={todayISO()}
+                  value={form.birth_date}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="fiscal_code">Codice fiscale</label>
+                <input
+                  id="fiscal_code"
+                  name="fiscal_code"
+                  aria-invalid={Boolean(fieldErrors.fiscal_code)}
+                  type="text"
+                  maxLength="16"
+                  className={`au-upper ${fieldErrors.fiscal_code ? 'au-invalid' : ''}`}
+                  value={form.fiscal_code}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="address">Via di residenza</label>
+                <input
+                  id="address"
+                  name="address"
+                  aria-invalid={Boolean(fieldErrors.address)}
+                  className={invalid('address')}
+                  type="text"
+                  value={form.address}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="city">Città</label>
+                <input
+                  id="city"
+                  name="city"
+                  type="text"
+                  aria-invalid={Boolean(fieldErrors.city)}
+                  className={invalid('city')}
+                  value={form.city}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="postal_code">CAP</label>
+                <input
+                  id="postal_code"
+                  name="postal_code"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength="5"
+                  aria-invalid={Boolean(fieldErrors.postal_code)}
+                  className={invalid('postal_code')}
+                  value={form.postal_code}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="phone">Telefono</label>
+                <input
+                  id="phone"
+                  name="phone"
+                  aria-invalid={Boolean(fieldErrors.phone)}
+                  className={invalid('phone')}
+                  type="tel"
+                  value={form.phone}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="password">Password (almeno 8 caratteri)</label>
+                <input
+                  id="password"
+                  name="password"
+                  aria-invalid={Boolean(fieldErrors.password)}
+                  className={invalid('password')}
+                  type="password"
+                  value={form.password}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="role">Ruolo</label>
+                <select id="role" name="role" value={form.role} onChange={handleChange}>
+                  <option value="employee">Dipendente</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <button type="submit" disabled={isSaving}>
+                {isSaving ? 'Creazione...' : 'Crea account'}
+              </button>
+
+              {(problemList.length > 0 || showFormError) && (
+                <div className="au-form-errors" role="alert">
+                  <strong>
+                    {problemList.length > 1
+                      ? `Non posso creare l'account: ${problemList.length} cose da correggere`
+                      : "Non posso creare l'account:"}
+                  </strong>
+                  <ul>
+                    {problemList.map((text) => (
+                      <li key={text}>{text}</li>
+                    ))}
+                    {showFormError && <li>{formError}</li>}
+                  </ul>
+                </div>
+              )}
+            </form>
+            <p className="au-meta">
+              Username:{' '}
+              <strong>{previewUsername(form.first_name, form.last_name) || 'nome.cognome'}</strong>{' '}
+              (automatico; per due omonimi il secondo riceve un numero, e li distingue il codice
+              fiscale).
+            </p>
+            <p className="au-meta">
+              Un dipendente gestisce servizi e orari. Un admin può anche creare ed eliminare gli
+              account del personale.
+            </p>
+          </section>
+        )}
+
+        {view === 'list' && (
+          <section className="au-card">
+            <h2>Tutti gli account</h2>
+
+            <div className="au-toolbar">
+              <div className="au-filters">
+                {ROLE_FILTERS.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={roleFilter === item.value ? 'au-filter active' : 'au-filter'}
+                    onClick={() => setRoleFilter(item.value)}
+                  >
+                    {item.label} ({countOf(item.value)})
+                  </button>
+                ))}
+              </div>
+              <div className="au-search-box">
+                <svg
+                  className="au-search-icon"
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="16.5" y1="16.5" x2="21" y2="21" />
+                </svg>
+                <input
+                  type="text"
+                  className="au-search"
+                  placeholder="Cerca"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
             </div>
-            <input
-              type="search"
-              className="au-search"
-              placeholder="Cerca nome, username o email"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
 
-          {isLoading && <p className="au-meta">Caricamento utenti...</p>}
+            {isLoading && <p className="au-meta">Caricamento utenti...</p>}
 
-          {!isLoading && visibleUsers.length === 0 && (
-            <p className="au-meta">Nessun account con questi filtri.</p>
-          )}
+            {!isLoading && visibleUsers.length === 0 && (
+              <p className="au-meta">Nessun account con questi filtri.</p>
+            )}
 
-          {visibleUsers.length > 0 && (
-            <div className="au-table-wrapper">
-              <table className="au-table">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Ruolo</th>
-                    <th>Registrato il</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleUsers.map((account) => (
-                    <tr key={account.id}>
-                      <td>{account.full_name}</td>
-                      <td>{account.username}</td>
-                      <td>{account.email}</td>
-                      <td>
-                        <span className={`role-badge ${account.role}`}>
-                          {ROLE_LABELS[account.role]}
-                        </span>
-                      </td>
-                      <td className="au-nowrap">{formatDate(account.created_at)}</td>
-                      <td>
-                        {account.role !== 'customer' && (
+            {visibleUsers.length > 0 && (
+              <div className="au-table-wrapper">
+                <table className="au-table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Username</th>
+                      <th>Codice fiscale</th>
+                      <th>Nascita</th>
+                      <th>Telefono</th>
+                      <th>Indirizzo</th>
+                      <th>Cittadinanza</th>
+                      <th>Ruolo</th>
+                      <th>Registrato il</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleUsers.map((account) => (
+                      <tr key={account.id}>
+                        <td>{account.full_name}</td>
+                        <td>{account.username}</td>
+                        <td className="au-nowrap">{account.fiscal_code || '-'}</td>
+                        <td className="au-nowrap">
+                          {account.birth_date
+                            ? `${formatBirthDate(account.birth_date)} (${account.gender})`
+                            : '-'}
+                        </td>
+                        <td className="au-nowrap">{account.phone || '-'}</td>
+                        <td>
+                          {account.address
+                            ? `${account.address}${
+                                account.postal_code || account.city
+                                  ? `, ${[account.postal_code, account.city].filter(Boolean).join(' ')}`
+                                  : ''
+                              }`
+                            : '-'}
+                        </td>
+                        <td>{account.citizenship || '-'}</td>
+                        <td>
+                          <span className={`role-badge ${account.role}`}>
+                            {ROLE_LABELS[account.role]}
+                          </span>
+                        </td>
+                        <td className="au-nowrap">{formatDate(account.created_at)}</td>
+                        <td>
                           <button
                             type="button"
                             className="au-delete"
-                            onClick={() => handleDelete(account)}
+                            onClick={() => setAccountToDelete(account)}
                           >
                             Elimina
                           </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
       </main>
+
+      {/* Nothing is deleted until the admin confirms here */}
+      <ConfirmDialog
+        open={accountToDelete !== null}
+        title="Eliminare questo account?"
+        confirmLabel="Elimina"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setAccountToDelete(null)}
+      >
+        {accountToDelete && (
+          <>
+            <p>
+              <strong>{accountToDelete.full_name}</strong> ({accountToDelete.username})
+            </p>
+            {accountToDelete.role === 'customer' && (
+              <p>Verranno cancellate anche tutte le sue prenotazioni.</p>
+            )}
+            <p>Questa azione non si può annullare.</p>
+          </>
+        )}
+      </ConfirmDialog>
     </div>
   )
 }

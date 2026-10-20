@@ -12,7 +12,7 @@
   padding: 2rem;
   border-radius: 12px;
   width: 100%;
-  max-width: 380px;
+  max-width: 460px;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -24,11 +24,53 @@
   color: #0b3d91;
 }
 
-.register-form input {
+.register-form label {
+  font-size: 0.9rem;
+}
+
+.register-form input,
+.register-form select {
   padding: 0.6rem;
   border: 1px solid #ccc;
   border-radius: 8px;
   font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  background: white;
+}
+
+/* The fiscal code is typed in capitals (the page also converts it when sending) */
+.register-upper {
+  text-transform: uppercase;
+}
+
+/* Two fields side by side */
+.register-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.register-row label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.register-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.register-username {
+  margin: 0;
+  padding: 0.8rem;
+  background: #e8f0fb;
+  color: #0b3d91;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-align: center;
 }
 
 .register-form button {

@@ -1,6 +1,10 @@
 import datetime
+import re
+import unicodedata
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Literal
@@ -9,9 +13,10 @@ from database import get_db
 import models
 import schemas
 import auth
+import codice_fiscale
 from seed import init_db
 
-app = FastAPI(title="CISL-App Backend", version="0.6.0")
+app = FastAPI(title="CISL-App Backend", version="0.9.0")
 
 # In development we allow the React frontend (e.g. on localhost:5173) to call the API.
 app.add_middleware(
@@ -23,6 +28,71 @@ app.add_middleware(
 )
 
 
+# --- Readable validation errors -------------------------------------------
+# By default FastAPI answers 422 with a technical list. We turn it into ONE
+# Italian sentence per problem, so the frontend can show it as it is.
+FIELD_LABELS = {
+    "first_name": "Nome",
+    "last_name": "Cognome",
+    "fiscal_code": "Codice fiscale",
+    "birth_date": "Data di nascita",
+    "gender": "Sesso",
+    "password": "Password",
+    "address": "Via di residenza",
+    "city": "Città",
+    "postal_code": "CAP",
+    "phone": "Telefono",
+    "citizenship": "Cittadinanza",
+    "email": "Email",
+    "role": "Ruolo",
+    "username": "Username",
+}
+
+PATTERN_HINTS = {
+    "postal_code": "deve avere 5 cifre",
+    "phone": "usa solo cifre e spazi (un + iniziale è ammesso)",
+    "fiscal_code": "servono 16 caratteri tra lettere e cifre",
+    "email": "indirizzo non valido",
+}
+
+
+def _describe_error(err: dict) -> str:
+    field = next((str(p) for p in reversed(err.get("loc", [])) if str(p) in FIELD_LABELS), None)
+    label = FIELD_LABELS.get(field) if field else None
+    kind = err.get("type", "")
+    ctx = err.get("ctx", {})
+
+    if kind == "missing":
+        text = "mancante"
+    elif kind == "string_too_short":
+        text = f"troppo corto (almeno {ctx.get('min_length')} caratteri)"
+    elif kind == "string_too_long":
+        text = f"troppo lungo (massimo {ctx.get('max_length')} caratteri)"
+    elif kind == "string_pattern_mismatch":
+        text = PATTERN_HINTS.get(field, "formato non valido")
+    elif kind in ("literal_error", "enum"):
+        text = "valore non ammesso"
+    elif kind.startswith("date") or kind.startswith("datetime"):
+        text = "data non valida"
+    elif kind == "value_error":
+        # our own validators (e.g. password too long) already have a readable message
+        text = str(err.get("msg", "")).replace("Value error, ", "")
+    else:
+        text = "non valido"
+
+    return f"{label}: {text}." if label else f"Dati non validi ({text})."
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    messages = []
+    for err in exc.errors():
+        text = _describe_error(err)
+        if text not in messages:
+            messages.append(text)
+    return JSONResponse(status_code=422, content={"detail": " ".join(messages)})
+
+
 @app.on_event("startup")
 def on_startup():
     init_db()
@@ -31,6 +101,43 @@ def on_startup():
 @app.get("/")
 def root():
     return {"status": "ok", "message": "CISL-App backend attivo"}
+
+
+# ---------- HELPERS ----------
+def _clean_part(text: str) -> str:
+    """'Élisa De Luca' -> 'elisadeluca': no accents, spaces or symbols."""
+    ascii_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", ascii_text.lower())
+
+
+def make_username(db: Session, first_name: str, last_name: str) -> str:
+    """Builds 'first.last'. If it is taken, adds a number: 'first.last2', 'first.last3'..."""
+    first, last = _clean_part(first_name), _clean_part(last_name)
+    if not first or not last:
+        raise HTTPException(status_code=422, detail="Nome e cognome devono contenere lettere")
+
+    base = f"{first}.{last}"
+    username, n = base, 1
+    while db.query(models.User).filter(models.User.username == username).first():
+        n += 1
+        username = f"{base}{n}"
+    return username
+
+
+def check_identity(db: Session, fiscal_code: str, birth_date: datetime.date, gender: str) -> str:
+    """Validates the fiscal code (and its match with birth date and gender) and
+    makes sure nobody is registered with it yet. Returns the normalized code."""
+    if birth_date > datetime.date.today() or birth_date.year < 1900:
+        raise HTTPException(status_code=400, detail="Data di nascita non valida")
+
+    try:
+        code = codice_fiscale.validate(fiscal_code, birth_date, gender)
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err))
+
+    if db.query(models.User).filter(models.User.fiscal_code == code).first():
+        raise HTTPException(status_code=400, detail="Questo codice fiscale è già registrato")
+    return code
 
 
 # ---------- AUTHENTICATION ----------
@@ -48,23 +155,34 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
         access_token=token,
         role=user.role,
         full_name=user.full_name,
+        username=user.username,
     )
 
 
 @app.post("/auth/register", response_model=schemas.TokenResponse, status_code=201)
 def register(data: schemas.RegisterRequest, db: Session = Depends(get_db)):
     """Public registration: always creates a 'customer' user and logs them in right away."""
-    if db.query(models.User).filter(models.User.username == data.username).first():
-        raise HTTPException(status_code=400, detail="Username gia' in uso")
-
-    email = data.email.lower()
-    if db.query(models.User).filter(models.User.email == email).first():
+    email = data.email.lower() if data.email else None
+    if email and db.query(models.User).filter(models.User.email == email).first():
         raise HTTPException(status_code=400, detail="Email gia' registrata")
 
+    fiscal_code = check_identity(db, data.fiscal_code, data.birth_date, data.gender)
+
+    first, last = data.first_name.strip(), data.last_name.strip()
     user = models.User(
-        username=data.username,
+        username=make_username(db, first, last),
         password_hash=auth.hash_password(data.password),
-        full_name=data.full_name.strip(),
+        first_name=first,
+        last_name=last,
+        full_name=f"{first} {last}",
+        fiscal_code=fiscal_code,
+        birth_date=data.birth_date,
+        gender=data.gender,
+        address=data.address.strip(),
+        city=data.city.strip(),
+        postal_code=data.postal_code.strip(),
+        phone=data.phone.strip(),
+        citizenship=data.citizenship.strip(),
         email=email,
         role="customer",
     )
@@ -73,7 +191,9 @@ def register(data: schemas.RegisterRequest, db: Session = Depends(get_db)):
     db.refresh(user)
 
     token = auth.create_access_token(data={"sub": str(user.id)})
-    return schemas.TokenResponse(access_token=token, role=user.role, full_name=user.full_name)
+    return schemas.TokenResponse(
+        access_token=token, role=user.role, full_name=user.full_name, username=user.username
+    )
 
 
 @app.get("/auth/me", response_model=schemas.UserOut)
@@ -128,13 +248,22 @@ def create_employee(
     db: Session = Depends(get_db),
     _admin: models.User = Depends(auth.require_admin),
 ):
-    if db.query(models.User).filter(models.User.username == data.username).first():
-        raise HTTPException(status_code=400, detail="Username gia' esistente")
+    fiscal_code = check_identity(db, data.fiscal_code, data.birth_date, data.gender)
 
+    first, last = data.first_name.strip(), data.last_name.strip()
     new_user = models.User(
-        username=data.username,
+        username=make_username(db, first, last),
         password_hash=auth.hash_password(data.password),
-        full_name=data.full_name.strip(),
+        first_name=first,
+        last_name=last,
+        full_name=f"{first} {last}",
+        fiscal_code=fiscal_code,
+        birth_date=data.birth_date,
+        gender=data.gender,
+        address=data.address.strip(),
+        city=data.city.strip(),
+        postal_code=data.postal_code.strip(),
+        phone=data.phone.strip(),
         role=data.role,
     )
     db.add(new_user)
@@ -143,30 +272,38 @@ def create_employee(
     return new_user
 
 
-@app.delete("/admin/employees/{employee_id}")
-def delete_employee(
-    employee_id: int,
+@app.delete("/admin/users/{user_id}")
+def delete_user(
+    user_id: int,
     db: Session = Depends(get_db),
     admin: models.User = Depends(auth.require_admin),
 ):
-    if employee_id == admin.id:
+    """Deletes any account (admin, employee or customer)."""
+    if user_id == admin.id:
         raise HTTPException(status_code=400, detail="Non puoi eliminare il tuo stesso account")
 
-    user = (
-        db.query(models.User)
-        .filter(models.User.id == employee_id, models.User.role.in_(["admin", "employee"]))
-        .first()
-    )
+    user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Dipendente non trovato")
+        raise HTTPException(status_code=404, detail="Utente non trovato")
 
     # The services this person created stay: they just lose the "created by" link
     db.query(models.Service).filter(models.Service.created_by == user.id).update(
         {"created_by": None}
     )
+
+    # A customer's bookings go away with the account and their slots become free again
+    bookings = db.query(models.Booking).filter(models.Booking.user_id == user.id).all()
+    for booking in bookings:
+        booking.slot.is_booked = False
+        db.delete(booking)
+
     db.delete(user)
     db.commit()
-    return {"status": "ok", "message": "Dipendente eliminato"}
+    return {
+        "status": "ok",
+        "message": "Utente eliminato",
+        "deleted_bookings": len(bookings),
+    }
 
 
 # ---------- SERVICES ----------

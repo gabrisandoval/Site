@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import SiteNavbar from '../components/SiteNavbar'
 import { getServices, getFreeSlots, createBooking } from '../api'
 import './BookService.css'
 
@@ -176,10 +177,9 @@ function BookService() {
 
   return (
     <div className="book-page">
-      <header className="book-header">
-        <h1>CISL App</h1>
-        <Link to="/">← Torna alla Home</Link>
-      </header>
+      <SiteNavbar>
+        <Link to="/" className="site-link">← Torna alla Home</Link>
+      </SiteNavbar>
 
       <main className="book-main">
         {error && <p className="book-error">{error}</p>}
