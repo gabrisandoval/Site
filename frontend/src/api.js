@@ -153,6 +153,6 @@ export function createStaff(token, data) {
   return request('/admin/employees', { method: 'POST', body: data, token })
 }
 
-export function deleteStaff(token, id) {
-  return request(`/admin/employees/${id}`, { method: 'DELETE', token })
+export function deleteUser(token, id) {
+  return request(`/admin/users/${id}`, { method: 'DELETE', token })
 }

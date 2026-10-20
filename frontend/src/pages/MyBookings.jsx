@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import SiteNavbar from '../components/SiteNavbar'
 import { getMyBookings, cancelBooking } from '../api'
 import './MyBookings.css'
 
@@ -78,10 +79,9 @@ function MyBookings() {
 
   return (
     <div className="mybookings-page">
-      <header className="mybookings-header">
-        <h1>CISL App</h1>
-        <Link to="/">← Torna alla Home</Link>
-      </header>
+      <SiteNavbar>
+        <Link to="/" className="site-link">← Torna alla Home</Link>
+      </SiteNavbar>
 
       <main className="mybookings-main">
         <h2>Le mie prenotazioni</h2>

@@ -21,24 +21,52 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     role: str
     full_name: str
+    username: str
+
+
+# Shared field rules for the personal data of every new account
+_NAME = dict(min_length=2, max_length=50)
+_ADDRESS = dict(min_length=5, max_length=150)
+_CITY = dict(min_length=2, max_length=80)
+_POSTAL_CODE = dict(pattern=r"^[0-9]{5}$")  # Italian CAP
+_PHONE = dict(pattern=r"^\+?[0-9 ]{6,20}$")
+# Only the shape here: the full check (control character, birth date, gender)
+# is done in main.py so the user gets a readable Italian message.
+_FISCAL_CODE = dict(min_length=16, max_length=16, pattern=r"^[A-Za-z0-9]{16}$")
 
 
 class RegisterRequest(BaseModel):
-    """Public customer registration. The role is NOT chosen: it is always 'customer'."""
-    username: str = Field(min_length=3, max_length=30, pattern=r"^[A-Za-z0-9_.-]+$")
+    """Public customer registration. The role is NOT chosen (always 'customer')
+    and the username is NOT chosen either: the server builds 'first.last'."""
+    first_name: str = Field(**_NAME)
+    last_name: str = Field(**_NAME)
+    fiscal_code: str = Field(**_FISCAL_CODE)
+    birth_date: datetime.date
+    gender: Literal["M", "F"]
     password: str = Field(min_length=8)
-    full_name: str = Field(min_length=2, max_length=100)
-    email: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", max_length=120)
+    address: str = Field(**_ADDRESS)
+    city: str = Field(**_CITY)
+    postal_code: str = Field(**_POSTAL_CODE)
+    phone: str = Field(**_PHONE)
+    citizenship: str = Field(min_length=2, max_length=60)
+    email: str | None = Field(default=None, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", max_length=120)
 
     _password_ok = field_validator("password")(_check_password_bytes)
 
 
 # --- Users ---
 class StaffCreate(BaseModel):
-    """Creation of an employee/admin account (admin only)."""
-    username: str = Field(min_length=3, max_length=30, pattern=r"^[A-Za-z0-9_.-]+$")
+    """Creation of an employee/admin account (admin only). Username is automatic."""
+    first_name: str = Field(**_NAME)
+    last_name: str = Field(**_NAME)
+    fiscal_code: str = Field(**_FISCAL_CODE)
+    birth_date: datetime.date
+    gender: Literal["M", "F"]
     password: str = Field(min_length=8)
-    full_name: str = Field(min_length=2, max_length=100)
+    address: str = Field(**_ADDRESS)
+    city: str = Field(**_CITY)
+    postal_code: str = Field(**_POSTAL_CODE)
+    phone: str = Field(**_PHONE)
     role: Literal["admin", "employee"] = "employee"
 
     _password_ok = field_validator("password")(_check_password_bytes)
@@ -50,6 +78,16 @@ class UserOut(BaseModel):
     id: int
     username: str
     full_name: str
+    first_name: str | None = None
+    last_name: str | None = None
+    fiscal_code: str | None = None
+    birth_date: datetime.date | None = None
+    gender: str | None = None
+    address: str | None = None
+    city: str | None = None
+    postal_code: str | None = None
+    phone: str | None = None
+    citizenship: str | None = None
     email: str | None = None
     role: str
     created_at: datetime.datetime

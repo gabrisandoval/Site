@@ -1,0 +1,26 @@
+.staff-welcome {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+  line-height: 1.3;
+}
+
+.staff-welcome span {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.staff-logout {
+  padding: 0.5rem 1.2rem;
+  background: white;
+  color: #0b3d91;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.staff-logout:hover {
+  background: #e8f0fb;
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getServices } from '../api'
+import SiteNavbar from '../components/SiteNavbar'
 import './Home.css'
 
 function Home() {
@@ -42,9 +43,7 @@ function Home() {
 
   return (
     <div className="home">
-      <header className="home-header">
-        <h1>Kasangga - Centro Servizi</h1>
-      </header>
+      <SiteNavbar />
 
       <main className="home-main">
         <section className="home-services">

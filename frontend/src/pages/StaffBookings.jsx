@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getAllBookings } from '../api'
+import StaffNavbar from '../components/StaffNavbar'
+import PageTop from '../components/PageTop'
 import './StaffBookings.css'
 
 // "2026-11-03" -> "martedì 3 novembre"
@@ -48,8 +49,7 @@ const TIME_FILTERS = [
 ]
 
 function StaffBookings() {
-  const { user, token, logout } = useAuth()
-  const navigate = useNavigate()
+  const { token } = useAuth()
 
   const [bookings, setBookings] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -81,11 +81,6 @@ function StaffBookings() {
       ignore = true
     }
   }, [token])
-
-  function handleLogout() {
-    logout()
-    navigate('/')
-  }
 
   // Past bookings read best with the most recent first, upcoming with the next first
   function handleTimeFilter(value) {
@@ -141,21 +136,11 @@ function StaffBookings() {
 
   return (
     <div className="sb-page">
-      <header className="sb-header">
-        <div>
-          <h1>Prenotazioni</h1>
-          <p>
-            {user?.full_name} ({user?.role})
-          </p>
-        </div>
-        <div className="sb-actions">
-          <Link to="/dashboard">← Area riservata</Link>
-          <Link to="/">Vai al sito</Link>
-          <button onClick={handleLogout}>Esci</button>
-        </div>
-      </header>
+      <StaffNavbar />
 
       <main className="sb-main">
+        <PageTop title="Prenotazioni" />
+
         <div className="sb-toolbar">
           <div className="sb-filters">
             {TIME_FILTERS.map((item) => (
