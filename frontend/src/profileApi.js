@@ -1,4 +1,4 @@
-// Calls used only by the Profile page (kept apart so api.js does not need changes).
+// Calls for the profile and for the admin editing an account (kept apart so api.js does not need changes).
 const API_BASE_URL = 'http://127.0.0.1:8000'
 
 async function call(path, token, options = {}) {
@@ -32,4 +32,9 @@ export function getProfile(token) {
 // Saves the contact data (only the fields that are sent are changed)
 export function updateProfile(token, changes) {
   return call('/auth/me', token, { method: 'PATCH', body: JSON.stringify(changes) })
+}
+
+// Admin only: changes the contact data of another account
+export function updateUser(token, userId, changes) {
+  return call(`/admin/users/${userId}`, token, { method: 'PATCH', body: JSON.stringify(changes) })
 }

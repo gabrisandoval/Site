@@ -1,0 +1,26 @@
+/* Red mark on a field with a problem */
+.field-invalid {
+  border-color: #b91c1c !important;
+  background: #fff5f5 !important;
+}
+
+/* Box that lists what is wrong, at the bottom of a form */
+.form-errors {
+  margin-top: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  background: #fdecea;
+  border: 1px solid #f5c2c0;
+  border-left: 4px solid #b91c1c;
+  border-radius: 8px;
+  color: #7f1d1d;
+  font-size: 0.95rem;
+}
+
+.form-errors ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.form-errors li {
+  margin: 0.2rem 0;
+}

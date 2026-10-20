@@ -1,0 +1,114 @@
+.edit-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.edit-box {
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.edit-box h2 {
+  margin: 0 0 0.25rem;
+}
+
+.edit-who {
+  margin: 0;
+}
+
+.edit-note {
+  margin: 0.25rem 0 1rem;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.edit-section {
+  margin: 0.75rem 0 0.1rem;
+  font-size: 1rem;
+  color: #0b3d91;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.edit-form input,
+.edit-form select {
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.edit-actions button {
+  padding: 0.6rem 1.3rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.edit-cancel {
+  background: white;
+  color: #0b3d91;
+  border: 1px solid #0b3d91;
+}
+
+.edit-save {
+  background: #0b3d91;
+  color: white;
+  border: 1px solid #0b3d91;
+}
+
+.edit-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Buttons in the last cell of the users table (Modifica + Elimina) */
+.au-row-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.au-edit {
+  padding: 0.35rem 0.8rem;
+  background: white;
+  color: #0b3d91;
+  border: 1px solid #0b3d91;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.au-edit:hover {
+  background: #0b3d91;
+  color: white;
+}
+
+.au-you {
+  color: #6b7280;
+  font-size: 0.85rem;
+}

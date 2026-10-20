@@ -6,6 +6,8 @@ import { FISCAL_CODE_REGEX, todayISO } from '../utils/identity'
 import StaffNavbar from '../components/StaffNavbar'
 import PageTop from '../components/PageTop'
 import ConfirmDialog from '../components/ConfirmDialog'
+import EditUserDialog from '../components/EditUserDialog'
+import { getProfile } from '../profileApi'
 import './AdminUsers.css'
 
 const ROLE_LABELS = {
@@ -176,6 +178,12 @@ function AdminUsers() {
   // The account the admin is about to delete (null = no confirmation box open)
   const [accountToDelete, setAccountToDelete] = useState(null)
 
+  // The account the admin is editing (null = no edit box open)
+  const [accountToEdit, setAccountToEdit] = useState(null)
+
+  // Id of the admin who is using the page: his own row has no "Elimina" button
+  const [myId, setMyId] = useState(null)
+
   // Load every account when the page opens
   useEffect(() => {
     let ignore = false
@@ -192,6 +200,13 @@ function AdminUsers() {
     }
 
     loadUsers()
+
+    // Who am I? (the server refuses to delete the own account, so we hide the button)
+    getProfile(token)
+      .then((me) => {
+        if (!ignore) setMyId(me.id)
+      })
+      .catch(() => {})
 
     return () => {
       ignore = true
@@ -302,6 +317,14 @@ function AdminUsers() {
   // The list shown at the bottom of the form: every local problem, or the server sentence
   const problemList = Object.values(fieldErrors)
   const showFormError = Boolean(formError)
+
+  // The server accepted the changes: show them in the table and close the box
+  function handleSaved(updated) {
+    setUsers(users.map((u) => (u.id === updated.id ? updated : u)))
+    setAccountToEdit(null)
+    setError('')
+    setMessage(`Dati di ${updated.full_name} aggiornati.`)
+  }
 
   // How many accounts for each role, shown on the filter buttons
   function countOf(role) {
@@ -617,13 +640,26 @@ function AdminUsers() {
                         </td>
                         <td className="au-nowrap">{formatDate(account.created_at)}</td>
                         <td>
-                          <button
-                            type="button"
-                            className="au-delete"
-                            onClick={() => setAccountToDelete(account)}
-                          >
-                            Elimina
-                          </button>
+                          <div className="au-row-actions">
+                            <button
+                              type="button"
+                              className="au-edit"
+                              onClick={() => setAccountToEdit(account)}
+                            >
+                              Modifica
+                            </button>
+                            {account.id === myId ? (
+                              <span className="au-you">(tu)</span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="au-delete"
+                                onClick={() => setAccountToDelete(account)}
+                              >
+                                Elimina
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -634,6 +670,14 @@ function AdminUsers() {
           </section>
         )}
       </main>
+
+      {/* Box to correct the contact data of an account */}
+      <EditUserDialog
+        account={accountToEdit}
+        token={token}
+        onSaved={handleSaved}
+        onCancel={() => setAccountToEdit(null)}
+      />
 
       {/* Nothing is deleted until the admin confirms here */}
       <ConfirmDialog

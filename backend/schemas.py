@@ -84,6 +84,16 @@ class ProfileUpdate(BaseModel):
     email: str | None = Field(default=None, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", max_length=120)
 
 
+class AdminUserUpdate(ProfileUpdate):
+    """What the admin can change on any account: the contact data of ProfileUpdate
+    plus the personal data. Only the fields that are sent are changed."""
+    first_name: str | None = Field(default=None, **_NAME)
+    last_name: str | None = Field(default=None, **_NAME)
+    fiscal_code: str | None = Field(default=None, **_FISCAL_CODE)
+    birth_date: datetime.date | None = None
+    gender: Literal["M", "F"] | None = None
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

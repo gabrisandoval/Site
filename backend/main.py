@@ -124,9 +124,16 @@ def make_username(db: Session, first_name: str, last_name: str) -> str:
     return username
 
 
-def check_identity(db: Session, fiscal_code: str, birth_date: datetime.date, gender: str) -> str:
+def check_identity(
+    db: Session,
+    fiscal_code: str,
+    birth_date: datetime.date,
+    gender: str,
+    exclude_user_id: int | None = None,
+) -> str:
     """Validates the fiscal code (and its match with birth date and gender) and
-    makes sure nobody is registered with it yet. Returns the normalized code."""
+    makes sure nobody else is registered with it. Returns the normalized code.
+    exclude_user_id: the account being edited (it may keep its own code)."""
     if birth_date > datetime.date.today() or birth_date.year < 1900:
         raise HTTPException(status_code=400, detail="Data di nascita non valida")
 
@@ -135,7 +142,10 @@ def check_identity(db: Session, fiscal_code: str, birth_date: datetime.date, gen
     except ValueError as err:
         raise HTTPException(status_code=400, detail=str(err))
 
-    if db.query(models.User).filter(models.User.fiscal_code == code).first():
+    query = db.query(models.User).filter(models.User.fiscal_code == code)
+    if exclude_user_id is not None:
+        query = query.filter(models.User.id != exclude_user_id)
+    if query.first():
         raise HTTPException(status_code=400, detail="Questo codice fiscale è già registrato")
     return code
 
@@ -201,6 +211,37 @@ def get_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
 
 
+def apply_contact_update(user: models.User, data: schemas.ProfileUpdate, db: Session) -> None:
+    """Change the contact data of an account (used by the person and by the admin).
+    Only the fields that were sent are changed; name, fiscal code, birth date and
+    gender are never touched here."""
+    sent = data.model_fields_set
+
+    for field in ("address", "city", "postal_code", "phone"):
+        value = getattr(data, field)
+        if field in sent and value is not None:
+            setattr(user, field, value.strip())
+
+    # The citizenship is asked to customers only
+    if "citizenship" in sent and data.citizenship and user.role == "customer":
+        user.citizenship = data.citizenship.strip()
+
+    if "email" in sent:
+        email = data.email.lower() if data.email else None
+        if email:
+            taken = (
+                db.query(models.User)
+                .filter(models.User.email == email, models.User.id != user.id)
+                .first()
+            )
+            if taken:
+                raise HTTPException(status_code=400, detail="Questa email è già usata da un altro account")
+        user.email = email
+
+    db.commit()
+    db.refresh(user)
+
+
 @app.patch("/auth/me", response_model=schemas.UserOut)
 def update_me(
     data: schemas.ProfileUpdate,
@@ -208,32 +249,48 @@ def update_me(
     db: Session = Depends(get_db),
 ):
     """The logged-in person edits their own contact data."""
+    apply_contact_update(current_user, data, db)
+    return current_user
+
+
+@app.patch("/admin/users/{user_id}", response_model=schemas.UserOut)
+def admin_update_user(
+    user_id: int,
+    data: schemas.AdminUserUpdate,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth.require_admin),
+):
+    """The admin corrects the data of any account: contact data and also the personal
+    data (name, fiscal code, birth date, gender). The username never changes, so the
+    person keeps logging in the same way."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
     sent = data.model_fields_set
 
-    for field in ("address", "city", "postal_code", "phone"):
-        value = getattr(data, field)
-        if field in sent and value is not None:
-            setattr(current_user, field, value.strip())
+    # Personal data: checked as a whole BEFORE anything is saved
+    if sent & {"first_name", "last_name"}:
+        first = (data.first_name or user.first_name or "").strip()
+        last = (data.last_name or user.last_name or "").strip()
+        if not _clean_part(first) or not _clean_part(last):
+            raise HTTPException(status_code=422, detail="Nome e cognome devono contenere lettere")
+        user.first_name, user.last_name, user.full_name = first, last, f"{first} {last}"
 
-    # The citizenship is asked to customers only
-    if "citizenship" in sent and data.citizenship and current_user.role == "customer":
-        current_user.citizenship = data.citizenship.strip()
-
-    if "email" in sent:
-        email = data.email.lower() if data.email else None
-        if email:
-            taken = (
-                db.query(models.User)
-                .filter(models.User.email == email, models.User.id != current_user.id)
-                .first()
+    if sent & {"fiscal_code", "birth_date", "gender"}:
+        fiscal_code = data.fiscal_code or user.fiscal_code
+        birth_date = data.birth_date or user.birth_date
+        gender = data.gender or user.gender
+        if not (fiscal_code and birth_date and gender):
+            raise HTTPException(
+                status_code=400,
+                detail="Per questo account indica insieme codice fiscale, data di nascita e sesso",
             )
-            if taken:
-                raise HTTPException(status_code=400, detail="Questa email è già usata da un altro account")
-        current_user.email = email
+        user.fiscal_code = check_identity(db, fiscal_code, birth_date, gender, exclude_user_id=user.id)
+        user.birth_date = birth_date
+        user.gender = gender
 
-    db.commit()
-    db.refresh(current_user)
-    return current_user
+    apply_contact_update(user, data, db)  # also commits
+    return user
 
 
 @app.post("/auth/change-password")
