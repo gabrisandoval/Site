@@ -1,0 +1,9 @@
+/* Bottom back button: on its own line, a bit of space above */
+.page-bottom {
+  margin-top: 1.5rem;
+}
+
+/* Inside the flex layout of the reserved area it takes a full row */
+.dashboard-main > .page-bottom {
+  flex: 0 0 100%;
+}

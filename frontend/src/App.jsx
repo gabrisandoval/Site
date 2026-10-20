@@ -10,6 +10,7 @@ import StaffBookings from './pages/StaffBookings'
 import AdminUsers from './pages/AdminUsers'
 import BookService from './pages/BookService'
 import MyBookings from './pages/MyBookings'
+import Profile from './pages/Profile'
 
 function App() {
   return (
@@ -64,6 +65,14 @@ function App() {
             element={
               <ProtectedRoute roles={['customer']}>
                 <MyBookings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profilo"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import UserNavbar from '../components/UserNavbar'
 import { getServices } from '../api'
-import SiteNavbar from '../components/SiteNavbar'
 import './Home.css'
 
 function Home() {
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
   // Customers book services; employees and admins manage them
@@ -43,7 +43,7 @@ function Home() {
 
   return (
     <div className="home">
-      <SiteNavbar />
+      <UserNavbar />
 
       <main className="home-main">
         <section className="home-services">
@@ -68,7 +68,7 @@ function Home() {
               )}
 
               {isStaff && (
-                <button onClick={() => navigate(`/dashboard?service=${service.id}`)}>
+                <button onClick={() => navigate(`/dashboard/servizi?service=${service.id}`)}>
                   Modifica
                 </button>
               )}
@@ -84,7 +84,6 @@ function Home() {
           <div className="account-box">
             {isAuthenticated ? (
               <>
-                <p>Benvenuto, {user?.full_name}</p>
                 {isStaff && (
                   <Link to="/dashboard" className="account-link">
                     Vai all'area riservata
@@ -95,7 +94,12 @@ function Home() {
                     Le mie prenotazioni
                   </Link>
                 )}
-                <button onClick={logout}>Esci</button>
+                {/* The admin has no profile page: no button */}
+                {user?.role !== 'admin' && (
+                  <Link to="/profilo" className="account-link">
+                    Profilo
+                  </Link>
+                )}
               </>
             ) : (
               <>
