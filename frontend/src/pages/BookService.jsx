@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import SiteNavbar from '../components/SiteNavbar'
+import UserNavbar from '../components/UserNavbar'
+import PageTop from '../components/PageTop'
 import { getServices, getFreeSlots, createBooking } from '../api'
 import './BookService.css'
 
@@ -177,11 +178,11 @@ function BookService() {
 
   return (
     <div className="book-page">
-      <SiteNavbar>
-        <Link to="/" className="site-link">← Torna alla Home</Link>
-      </SiteNavbar>
+      <UserNavbar />
 
       <main className="book-main">
+        <PageTop title="Prenota un servizio" backTo="/" />
+
         {error && <p className="book-error">{error}</p>}
 
         {service && (

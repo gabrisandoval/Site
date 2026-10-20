@@ -201,6 +201,41 @@ def get_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
 
 
+@app.patch("/auth/me", response_model=schemas.UserOut)
+def update_me(
+    data: schemas.ProfileUpdate,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The logged-in person edits their own contact data."""
+    sent = data.model_fields_set
+
+    for field in ("address", "city", "postal_code", "phone"):
+        value = getattr(data, field)
+        if field in sent and value is not None:
+            setattr(current_user, field, value.strip())
+
+    # The citizenship is asked to customers only
+    if "citizenship" in sent and data.citizenship and current_user.role == "customer":
+        current_user.citizenship = data.citizenship.strip()
+
+    if "email" in sent:
+        email = data.email.lower() if data.email else None
+        if email:
+            taken = (
+                db.query(models.User)
+                .filter(models.User.email == email, models.User.id != current_user.id)
+                .first()
+            )
+            if taken:
+                raise HTTPException(status_code=400, detail="Questa email è già usata da un altro account")
+        current_user.email = email
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 @app.post("/auth/change-password")
 def change_password(
     data: schemas.PasswordChange,

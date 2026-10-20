@@ -72,6 +72,18 @@ class StaffCreate(BaseModel):
     _password_ok = field_validator("password")(_check_password_bytes)
 
 
+class ProfileUpdate(BaseModel):
+    """What a logged-in person can change about themselves. Name, fiscal code, birth
+    date and gender are NOT here: they identify the person and stay as registered.
+    Only the fields that are sent get changed (email: null removes it)."""
+    address: str | None = Field(default=None, **_ADDRESS)
+    city: str | None = Field(default=None, **_CITY)
+    postal_code: str | None = Field(default=None, **_POSTAL_CODE)
+    phone: str | None = Field(default=None, **_PHONE)
+    citizenship: str | None = Field(default=None, min_length=2, max_length=60)
+    email: str | None = Field(default=None, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", max_length=120)
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

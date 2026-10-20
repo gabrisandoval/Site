@@ -1,0 +1,9 @@
+/* Welcome text on the right of the public navbar */
+.user-welcome {
+  text-align: right;
+  line-height: 1.3;
+}
+
+.user-welcome span {
+  font-size: 1.1rem;
+}

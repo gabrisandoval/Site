@@ -123,3 +123,60 @@
     order: -1;
   }
 }
+
+
+/* Hover of the buttons in the account card (Le mie prenotazioni, Profilo, Accedi...) */
+.account-box .account-link,
+.account-box .account-secondary {
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+.account-box .account-link:hover {
+  background: #082c6b;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(11, 61, 145, 0.3);
+}
+
+.account-box .account-secondary:hover {
+  background: #0b3d91;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(11, 61, 145, 0.3);
+}
+
+
+/* Hover of the buttons inside the service cards (Prenota, Modifica) */
+.service-card button {
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+.service-card button:hover {
+  background: #082c6b;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(11, 61, 145, 0.3);
+}
+
+
+/* "Registrati": a button with a blue border (the "Accedi" button is the filled one) */
+.account-box .account-secondary {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: white;
+  color: #0b3d91;
+  border: 2px solid #0b3d91;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  text-align: center;
+  text-decoration: none;
+}

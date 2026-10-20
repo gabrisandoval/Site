@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import SiteNavbar from '../components/SiteNavbar'
+import UserNavbar from '../components/UserNavbar'
+import PageTop from '../components/PageTop'
 import { getMyBookings, cancelBooking } from '../api'
 import './MyBookings.css'
 
@@ -79,12 +79,10 @@ function MyBookings() {
 
   return (
     <div className="mybookings-page">
-      <SiteNavbar>
-        <Link to="/" className="site-link">← Torna alla Home</Link>
-      </SiteNavbar>
+      <UserNavbar />
 
       <main className="mybookings-main">
-        <h2>Le mie prenotazioni</h2>
+        <PageTop title="Le mie prenotazioni" backTo="/" />
 
         {error && <p className="mybookings-error">{error}</p>}
 

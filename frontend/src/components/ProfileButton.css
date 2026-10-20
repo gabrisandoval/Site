@@ -1,0 +1,22 @@
+/* Written with a double class so it wins over the generic button rules of the Home page */
+.account-box .profile-button,
+.profile-button {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 1rem;
+  background: white;
+  color: #0b3d91;
+  border: 2px solid #0b3d91;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  text-align: center;
+  cursor: pointer;
+}
+
+.account-box .profile-button:hover,
+.profile-button:hover {
+  background: #0b3d91;
+  color: white;
+}

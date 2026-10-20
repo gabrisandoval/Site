@@ -1,6 +1,7 @@
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import StaffNavbar from '../components/StaffNavbar'
+import BackButton from '../components/BackButton'
 import './Dashboard.css'
 
 // Home of the reserved area: one card for each thing the staff can manage
@@ -50,6 +51,9 @@ function Dashboard() {
             </Link>
           )}
         </div>
+
+        {/* Back to the public site */}
+        <BackButton to="/" />
       </main>
     </div>
   )
