@@ -2,23 +2,33 @@ import { createContext, useContext, useState } from 'react'
 
 const AuthContext = createContext(null)
 
+// The login is kept in sessionStorage: it survives a page refresh, but it ends when
+// the browser tab/window is closed. So opening the site again always starts from the
+// Home page with nobody logged in.
+const storage = window.sessionStorage
+
+// Old versions of the site kept the login in localStorage (it never expired by itself):
+// remove it, otherwise the old admin login would still be there.
+localStorage.removeItem('token')
+localStorage.removeItem('user')
+
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('token'))
+  const [token, setToken] = useState(() => storage.getItem('token'))
   const [user, setUser] = useState(() =>
-    JSON.parse(localStorage.getItem('user') || 'null')
+    JSON.parse(storage.getItem('user') || 'null')
   )
 
   function saveSession(data) {
     const userData = { role: data.role, full_name: data.full_name }
-    localStorage.setItem('token', data.access_token)
-    localStorage.setItem('user', JSON.stringify(userData))
+    storage.setItem('token', data.access_token)
+    storage.setItem('user', JSON.stringify(userData))
     setToken(data.access_token)
     setUser(userData)
   }
 
   function logout() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    storage.removeItem('token')
+    storage.removeItem('user')
     setToken(null)
     setUser(null)
   }

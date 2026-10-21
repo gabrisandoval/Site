@@ -1,3 +1,4 @@
+import './sessionGuard' // must be loaded first: it watches every request for an expired login
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -11,11 +12,13 @@ import AdminUsers from './pages/AdminUsers'
 import BookService from './pages/BookService'
 import MyBookings from './pages/MyBookings'
 import Profile from './pages/Profile'
+import SessionNotice from './components/SessionNotice'
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <SessionNotice />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />

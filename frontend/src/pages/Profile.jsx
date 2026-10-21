@@ -7,6 +7,7 @@ import UserNavbar from '../components/UserNavbar'
 import PageTop from '../components/PageTop'
 import ContactFields from '../components/ContactFields'
 import FormErrors from '../components/FormErrors'
+import ChangePasswordForm from '../components/ChangePasswordForm'
 import './Profile.css'
 
 const ROLE_LABELS = { admin: 'Admin', employee: 'Dipendente', customer: 'Cliente' }
@@ -151,6 +152,11 @@ function Profile() {
                 {message && <p className="profile-success">{message}</p>}
                 <FormErrors items={errorList} title="Non posso salvare:" />
               </form>
+            </section>
+
+            <section className="profile-card">
+              <h2>Cambia password</h2>
+              <ChangePasswordForm token={token} />
             </section>
           </>
         )}
