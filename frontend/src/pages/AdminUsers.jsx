@@ -354,22 +354,18 @@ function AdminUsers() {
       <StaffNavbar />
 
       <main className="au-main">
-        <PageTop title="Utenti" />
+        {/* "Indietro" leads to the reserved area, but only from the list: while the
+            "new employee" form is open the only way back is "Torna agli account" */}
+        <PageTop title="Utenti" backTo={view === 'create' ? null : '/dashboard'} />
 
+        {/* One button: opens the "new employee" form, and brings back to the list */}
         <div className="au-tabs">
           <button
             type="button"
             className={view === 'create' ? 'au-tab active' : 'au-tab'}
-            onClick={() => changeView('create')}
+            onClick={() => changeView(view === 'create' ? 'list' : 'create')}
           >
-            Crea dipendente
-          </button>
-          <button
-            type="button"
-            className={view === 'list' ? 'au-tab active' : 'au-tab'}
-            onClick={() => changeView('list')}
-          >
-            Gestisci account ({users.length})
+            {view === 'create' ? '← Torna agli account' : 'Crea dipendente'}
           </button>
         </div>
 

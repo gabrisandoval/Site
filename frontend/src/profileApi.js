@@ -38,3 +38,11 @@ export function updateProfile(token, changes) {
 export function updateUser(token, userId, changes) {
   return call(`/admin/users/${userId}`, token, { method: 'PATCH', body: JSON.stringify(changes) })
 }
+
+// The logged-in person changes their own password
+export function changePassword(token, currentPassword, newPassword) {
+  return call('/auth/change-password', token, {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  })
+}

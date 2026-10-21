@@ -1,0 +1,27 @@
+.session-notice {
+  position: fixed;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: calc(100% - 2rem);
+  padding: 0.8rem 1.1rem;
+  background: #fff4e5;
+  color: #7a4100;
+  border: 1px solid #f5c98b;
+  border-left: 4px solid #e08a00;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.session-notice button {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}

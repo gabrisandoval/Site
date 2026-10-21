@@ -294,3 +294,10 @@
 .au-form-errors li {
   margin: 0.2rem 0;
 }
+
+
+/* "Crea dipendente" button on the right */
+.au-tabs {
+  display: flex;
+  justify-content: flex-end;
+}

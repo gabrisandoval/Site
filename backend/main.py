@@ -46,6 +46,8 @@ FIELD_LABELS = {
     "email": "Email",
     "role": "Ruolo",
     "username": "Username",
+    "current_password": "Password attuale",
+    "new_password": "Nuova password",
 }
 
 PATTERN_HINTS = {
@@ -108,6 +110,14 @@ def _clean_part(text: str) -> str:
     """'Élisa De Luca' -> 'elisadeluca': no accents, spaces or symbols."""
     ascii_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-z0-9]", "", ascii_text.lower())
+
+
+def format_name(text: str) -> str:
+    """'giulia' -> 'Giulia', 'DE luca' -> 'De Luca', "d'angelo" -> "D'Angelo",
+    'bianchi-neri' -> 'Bianchi-Neri', 'via roma 12/a' -> 'Via Roma 12/A':
+    every word starts with a capital letter (used for names and for the street)."""
+    text = " ".join(text.split())  # no double or outer spaces
+    return re.sub(r"[^\W\d_]+", lambda word: word.group()[:1].upper() + word.group()[1:].lower(), text)
 
 
 def make_username(db: Session, first_name: str, last_name: str) -> str:
@@ -178,7 +188,7 @@ def register(data: schemas.RegisterRequest, db: Session = Depends(get_db)):
 
     fiscal_code = check_identity(db, data.fiscal_code, data.birth_date, data.gender)
 
-    first, last = data.first_name.strip(), data.last_name.strip()
+    first, last = format_name(data.first_name), format_name(data.last_name)
     user = models.User(
         username=make_username(db, first, last),
         password_hash=auth.hash_password(data.password),
@@ -188,7 +198,7 @@ def register(data: schemas.RegisterRequest, db: Session = Depends(get_db)):
         fiscal_code=fiscal_code,
         birth_date=data.birth_date,
         gender=data.gender,
-        address=data.address.strip(),
+        address=format_name(data.address),
         city=data.city.strip(),
         postal_code=data.postal_code.strip(),
         phone=data.phone.strip(),
@@ -220,7 +230,8 @@ def apply_contact_update(user: models.User, data: schemas.ProfileUpdate, db: Ses
     for field in ("address", "city", "postal_code", "phone"):
         value = getattr(data, field)
         if field in sent and value is not None:
-            setattr(user, field, value.strip())
+            # the street starts every word with a capital letter ("via roma 12" -> "Via Roma 12")
+            setattr(user, field, format_name(value) if field == "address" else value.strip())
 
     # The citizenship is asked to customers only
     if "citizenship" in sent and data.citizenship and user.role == "customer":
@@ -270,8 +281,8 @@ def admin_update_user(
 
     # Personal data: checked as a whole BEFORE anything is saved
     if sent & {"first_name", "last_name"}:
-        first = (data.first_name or user.first_name or "").strip()
-        last = (data.last_name or user.last_name or "").strip()
+        first = format_name(data.first_name or user.first_name or "")
+        last = format_name(data.last_name or user.last_name or "")
         if not _clean_part(first) or not _clean_part(last):
             raise HTTPException(status_code=422, detail="Nome e cognome devono contenere lettere")
         user.first_name, user.last_name, user.full_name = first, last, f"{first} {last}"
@@ -301,6 +312,10 @@ def change_password(
 ):
     if not auth.verify_password(data.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="Password attuale non corretta")
+    if auth.verify_password(data.new_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=400, detail="La nuova password deve essere diversa da quella attuale"
+        )
 
     current_user.password_hash = auth.hash_password(data.new_password)
     db.commit()
@@ -342,7 +357,7 @@ def create_employee(
 ):
     fiscal_code = check_identity(db, data.fiscal_code, data.birth_date, data.gender)
 
-    first, last = data.first_name.strip(), data.last_name.strip()
+    first, last = format_name(data.first_name), format_name(data.last_name)
     new_user = models.User(
         username=make_username(db, first, last),
         password_hash=auth.hash_password(data.password),
@@ -352,7 +367,7 @@ def create_employee(
         fiscal_code=fiscal_code,
         birth_date=data.birth_date,
         gender=data.gender,
-        address=data.address.strip(),
+        address=format_name(data.address),
         city=data.city.strip(),
         postal_code=data.postal_code.strip(),
         phone=data.phone.strip(),
