@@ -15,8 +15,12 @@ import schemas
 import auth
 import codice_fiscale
 from seed import init_db
+import password_reset
 
 app = FastAPI(title="CISL-App Backend", version="0.9.0")
+
+# Admin: reset the password of any account (see password_reset.py)
+app.include_router(password_reset.router)
 
 # In development we allow the React frontend (e.g. on localhost:5173) to call the API.
 app.add_middleware(

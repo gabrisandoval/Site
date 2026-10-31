@@ -62,7 +62,7 @@ function ChangePasswordForm({ token }) {
     try {
       await changePassword(token, form.current, form.next)
       setForm(EMPTY)
-      setMessage('Password aggiornata. Dal prossimo accesso usa quella nuova.')
+      setMessage('Password aggiornata.')
     } catch (err) {
       setFieldErrors({ [fieldOfError(err.message)]: err.message })
     } finally {

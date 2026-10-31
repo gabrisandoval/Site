@@ -130,8 +130,6 @@ function Profile() {
                 <dd>{account.birth_date ? formatBirthDate(account.birth_date) : '-'}</dd>
                 <dt>Sesso</dt>
                 <dd>{GENDER_LABELS[account.gender] || '-'}</dd>
-                <dt>Ruolo</dt>
-                <dd>{ROLE_LABELS[account.role] || account.role}</dd>
               </dl>
             </section>
 
